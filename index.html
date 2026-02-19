@@ -1,1 +1,182 @@
-index.html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>실전모의고사 점수 관리 시스템</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial; background:#f4f6f9; margin:0; padding:20px; }
+.container { max-width:1100px; margin:auto; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);} 
+h1{text-align:center;}
+input,select,button{padding:10px;margin:5px 0;width:100%;box-sizing:border-box;}
+button{background:#4CAF50;color:white;border:none;border-radius:6px;cursor:pointer;}
+button:hover{background:#45a049;}
+table{width:100%;margin-top:20px;border-collapse:collapse;}
+th,td{border:1px solid #ddd;padding:8px;text-align:center;}
+th{background:#f2f2f2;}
+.hidden{display:none;}
+.section{background:#eef2ff;padding:15px;margin-top:20px;border-radius:8px;}
+.type-item{display:flex;justify-content:space-between;margin:5px 0;}
+.small-btn{width:auto;padding:5px 10px;background:#e74c3c;}
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="container">
+<h1>🔐 로그인</h1>
+<input type="password" id="password" placeholder="비밀번호 입력">
+<button onclick="login()">로그인</button>
+</div>
+
+<div id="mainPage" class="container hidden">
+<h1>📊 실전모의고사 점수 관리</h1>
+
+<div class="section">
+<h3>📚 모의고사 종류 관리</h3>
+<input type="text" id="newType" placeholder="새 모의고사 종류 추가">
+<button onclick="addType()">종류 추가</button>
+<div id="typeList"></div>
+</div>
+
+<div class="section">
+<h3>✏ 점수 입력</h3>
+<select id="examType"></select>
+<input type="number" id="round" placeholder="회차 입력 (예: 1, 2, 3)">
+<input type="number" id="korean" placeholder="국어 점수">
+<input type="number" id="math" placeholder="수학 점수">
+<input type="number" id="english" placeholder="영어 점수">
+<input type="number" id="percentile" placeholder="백분위 (나중에 대학추천용)">
+<button onclick="addScore()">점수 추가</button>
+</div>
+
+<div class="section">
+<h3>🔎 모의고사 분석 보기</h3>
+<select id="viewType" onchange="renderAnalysis()"></select>
+<select id="viewRound" onchange="renderAnalysis()"></select>
+<div id="analysisResult"></div>
+</div>
+
+<div class="section">
+<h3>🏫 지원 가능 대학 (백분위 기준)</h3>
+<div id="universityResult">백분위 데이터를 입력하면 표시됩니다.</div>
+</div>
+
+</div>
+
+<script>
+const SITE_PASSWORD="1234";
+
+let scores=JSON.parse(localStorage.getItem('scores'))||[];
+let examTypes=JSON.parse(localStorage.getItem('examTypes'))||["학력평가","수능","사설","서바이벌"];
+
+// 나중에 네가 대학 리스트 주면 여기에 추가하면 됨
+let universityData={
+// 예시
+// 95:["의대A","의대B"],
+// 90:["연세대","고려대"],
+};
+
+function login(){
+if(document.getElementById('password').value===SITE_PASSWORD){
+document.getElementById('loginPage').classList.add('hidden');
+document.getElementById('mainPage').classList.remove('hidden');
+renderTypes();
+renderAnalysisSelectors();
+}else alert('비밀번호가 틀렸습니다');
+}
+
+function saveTypes(){localStorage.setItem('examTypes',JSON.stringify(examTypes));}
+
+function renderTypes(){
+const select=document.getElementById('examType');
+const viewSelect=document.getElementById('viewType');
+select.innerHTML=''; viewSelect.innerHTML='';
+examTypes.forEach(type=>{
+let opt1=new Option(type,type);
+let opt2=new Option(type,type);
+select.add(opt1);
+viewSelect.add(opt2);
+});
+
+const list=document.getElementById('typeList');
+list.innerHTML='';
+examTypes.forEach(type=>{
+let div=document.createElement('div');
+div.className='type-item';
+div.innerHTML=`${type} <button class='small-btn' onclick="deleteType('${type}')">삭제</button>`;
+list.appendChild(div);
+});
+}
+
+function addType(){
+const val=document.getElementById('newType').value.trim();
+if(!val||examTypes.includes(val)) return;
+examTypes.push(val);
+saveTypes();
+document.getElementById('newType').value='';
+renderTypes();
+}
+
+function deleteType(type){
+examTypes=examTypes.filter(t=>t!==type);
+saveTypes();
+renderTypes();
+}
+
+function addScore(){
+const type=document.getElementById('examType').value;
+const round=parseInt(document.getElementById('round').value);
+const korean=parseInt(document.getElementById('korean').value);
+const math=parseInt(document.getElementById('math').value);
+const english=parseInt(document.getElementById('english').value);
+const percentile=parseInt(document.getElementById('percentile').value);
+if(isNaN(round)||isNaN(korean)||isNaN(math)||isNaN(english)) return;
+
+const total=korean+math+english;
+scores.push({type,round,korean,math,english,total,percentile});
+localStorage.setItem('scores',JSON.stringify(scores));
+renderAnalysisSelectors();
+renderAnalysis();
+}
+
+function renderAnalysisSelectors(){
+const type=document.getElementById('viewType').value||examTypes[0];
+const rounds=[...new Set(scores.filter(s=>s.type===type).map(s=>s.round))];
+const roundSelect=document.getElementById('viewRound');
+roundSelect.innerHTML='';
+roundSelect.add(new Option('전체','all'));
+rounds.forEach(r=>roundSelect.add(new Option(r+'회차',r)));
+}
+
+function renderAnalysis(){
+const type=document.getElementById('viewType').value;
+const round=document.getElementById('viewRound').value;
+let filtered=scores.filter(s=>s.type===type);
+if(round!=='all') filtered=filtered.filter(s=>s.round==round);
+if(filtered.length===0){document.getElementById('analysisResult').innerHTML='데이터 없음';return;}
+
+let avg=(filtered.reduce((a,b)=>a+b.total,0)/filtered.length).toFixed(1);
+let myLatest=filtered[filtered.length-1];
+
+let html=`<b>${type}</b><br>`;
+if(round==='all') html+=`전체 평균: ${avg}<br>`;
+else html+=`${round}회차 평균: ${avg}<br>`;
+
+html+=`내 최근 점수: ${myLatest.total}<br>`;
+
+if(myLatest.percentile){
+let possible=[];
+for(let p in universityData){
+if(myLatest.percentile>=p) possible=possible.concat(universityData[p]);
+}
+document.getElementById('universityResult').innerHTML=
+possible.length?possible.join('<br>'):'해당 백분위 대학 데이터 없음';
+}
+
+document.getElementById('analysisResult').innerHTML=html;
+}
+
+</script>
+</body>
+</html>
