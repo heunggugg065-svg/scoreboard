@@ -297,22 +297,7 @@
   }
 
   // ===== 기본 관리자/기본 종류 생성 =====
-  async function ensureDefaultAdminIfNeeded(enteredPw) {
-    const snap = await getDocs(query(colUsers, limit(1)));
-    if (!snap.empty) return false;
-
-    if (enteredPw === "0704160931") {
-      await addDoc(colUsers, { password: "0704160931", grade: "의", createdAt: serverTimestamp() });
-
-      const typeSnap = await getDocs(query(colTypes, limit(1)));
-      if (typeSnap.empty) {
-        await addDoc(colTypes, { name: "학력평가", createdAt: serverTimestamp() });
-        await addDoc(colTypes, { name: "서바이벌", createdAt: serverTimestamp() });
-      }
-      return true;
-    }
-    return false;
-  }
+  
 
   async function logLogin(grade) {
     await addDoc(colLogs, { grade, time: new Date().toLocaleString(), createdAt: serverTimestamp() });
@@ -874,4 +859,5 @@
 </script>
 </body>
 </html>
+
 
