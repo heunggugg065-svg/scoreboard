@@ -8,7 +8,8 @@
   <style>
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(135deg,#111827,#4f46e5);margin:0;padding:20px}
     .container{max-width:1100px;margin:auto;background:#fff;padding:22px 22px 28px;border-radius:18px;box-shadow:0 15px 40px rgba(0,0,0,.25);position:relative}
-    h1{margin:6px 0 12px;text-align:center}
+    h1{margin:6px 0 6px;text-align:center}
+    .subh{margin:0 0 10px;text-align:center;color:#4b5563;font-size:13px}
     .top-right{position:absolute;top:14px;right:16px;display:flex;gap:10px;align-items:center}
     .link-btn{font-size:12px;color:#4f46e5;cursor:pointer;user-select:none;background:none;border:none}
     .badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;margin:6px 0}
@@ -18,7 +19,7 @@
     input,select,button,textarea{padding:10px;margin:6px 0;box-sizing:border-box;border-radius:10px;border:1px solid #d1d5db}
     input,select{width:100%}
     .row > *{flex:1 1 180px}
-    button{background:#4f46e5;color:#fff;border:none;cursor:pointer;font-weight:800}
+    button{background:#4f46e5;color:#fff;border:none;cursor:pointer;font-weight:900}
     button:hover{background:#4338ca}
     .ghost{background:#111827}
     .ghost:hover{background:#0b1220}
@@ -52,9 +53,6 @@
     .year-tab.active{background:#fff;color:#4f46e5;border-color:#c7d2fe}
     .year-tab.locked{opacity:.45;cursor:not-allowed}
     .year-bar{border:1px solid #c7d2fe;border-radius:14px;background:#fff;padding:10px 12px;margin-top:-1px}
-
-    .ok{color:#059669;font-weight:800}
-    .warn{color:#b45309;font-weight:800}
   </style>
 </head>
 
@@ -66,14 +64,26 @@
     </div>
 
     <h1>📊 ScoreBoard</h1>
+    <div id="helloLine" class="subh hidden"></div>
     <div id="roleBadge" class="badge hidden"></div>
 
+    <!-- 최초 관리자 설정(유저가 한 번만 입력) -->
+    <div id="setupSection" class="section hidden">
+      <h3>🧩 최초 1회: 관리자(의) 생성</h3>
+      <div class="muted">* 비밀번호는 저장될 때 암호화(해시)로 저장돼서 화면/목록에 안 보여요.</div>
+      <div class="row">
+        <input id="setupName" placeholder="관리자 이름 (예: 박준서)" />
+        <input id="setupPw" type="password" placeholder="관리자 비밀번호" />
+        <button id="setupBtn" class="ghost" type="button">관리자 생성</button>
+      </div>
+    </div>
+
     <!-- 로그인 -->
-    <div id="loginSection" class="section">
+    <div id="loginSection" class="section hidden">
       <h3>🔐 로그인</h3>
       <input id="pwInput" type="password" placeholder="비밀번호 입력" />
       <button id="loginBtn">로그인</button>
-      <div class="muted">※ 비밀번호는 화면/코드에 표시되지 않습니다.</div>
+      <div class="muted">※ 비밀번호는 화면에 표시되지 않습니다.</div>
     </div>
 
     <!-- 학년도 탭 -->
@@ -89,7 +99,7 @@
             <span class="pill">현재 등급: <b id="currentGradeLabel">-</b></span>
           </div>
           <div style="flex:2 1 520px" class="muted">
-            * 한/약/수는 2027학년도만 열람 가능합니다. (의/치는 2026/2027 모두 가능)
+            * 한/약/수는 2027학년도만 열람 가능. (의/치는 2026/2027 모두 가능)
           </div>
         </div>
       </div>
@@ -202,9 +212,10 @@
       </div>
 
       <div class="section" style="background:#fff">
-        <h3 style="margin:0 0 8px">👤 비밀번호/등급 만들기</h3>
+        <h3 style="margin:0 0 8px">👤 사용자 등록(이름+비밀번호+등급)</h3>
         <div class="row">
-          <input id="newPw" placeholder="새 비밀번호(사람별로)" />
+          <input id="newUserName" placeholder="이름" />
+          <input id="newPw" type="password" placeholder="비밀번호" />
           <select id="newGrade">
             <option value="치">치</option>
             <option value="한">한</option>
@@ -214,13 +225,13 @@
           </select>
           <button id="addUserBtn" class="ghost" type="button">추가</button>
         </div>
-        <div class="muted">* 의 등급은 점수/수정/관리 모두 가능</div>
+        <div class="muted">* 비밀번호는 해시로 저장되어 목록/코드에 표시되지 않음</div>
         <div id="userList" style="margin-top:10px"></div>
       </div>
 
       <div class="section" style="background:#fff">
-        <h3 style="margin:0 0 8px">🧾 로그인 기록</h3>
-        <div id="loginRecords" class="muted">불러오는 중…</div>
+        <h3 style="margin:0 0 8px">🧾 로그인 기록(의만 열람)</h3>
+        <div id="loginRecords" class="muted">기록 없음</div>
         <button id="clearLogsBtn" class="danger" type="button">로그인 기록 전체 삭제</button>
       </div>
 
@@ -270,748 +281,898 @@
           <button id="clearUnivBtn" class="danger" type="button">전체삭제</button>
         </div>
       </div>
+
+      <div class="section" style="background:#fff">
+        <h3 style="margin:0 0 8px">🧨 전체 초기화(주의)</h3>
+        <div class="muted">이 브라우저에 저장된 데이터를 모두 삭제합니다.</div>
+        <button id="resetAllBtn" class="danger" type="button">전체 데이터 삭제</button>
+      </div>
     </div>
   </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-  import {
-    getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
-    onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, where
-  } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+<script>
+/** =========================
+ *  저장/불러오기 (localStorage)
+ *  ========================= */
+const STORAGE_KEY = "scoreboard_state_v2";
 
-  // ✅ 여기 firebaseConfig를 너 값으로 바꿔서 붙여넣기
-  const firebaseConfig = {
-  apiKey: "AIzaSyCuMFRksmpH0TuNqv3YoMa76DAAN4r3B84",
-  authDomain: "scoreboard-d4bf9.firebaseapp.com",
-  projectId: "scoreboard-d4bf9",
-  storageBucket: "scoreboard-d4bf9.firebasestorage.app",
-  messagingSenderId: "272482248722",
-  appId: "1:272482248722:web:81147fe66081feb9da50cb",
-  measurementId: "G-VC1922P5SV"
-};
+function defaultState(){
+  return {
+    users: [], // {id, name, grade, pwHash, createdAt}
+    logs: [],  // {time, name, grade}
+    types: { "2026": [], "2027": [] }, // {id,name,createdAt}
+    scores: [], // {id,year,typeId,subject,round,score,percentile,updatedAt}
+    stats: [],  // {id,year,typeId,subject,round,avg,cut1..cut9,updatedAt}
+    units: [],  // {id,year,typeId,subject,round,unit,score,maxScore,updatedAt}
+    univ:  { "2026": [], "2027": [] }  // {id,year,minPercentile,university,major,note,createdAt}
+  };
+}
 
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // 컬렉션
-  const colTypes  = collection(db, "sb_types");        // {year, name, createdAt}
-  const colScores = collection(db, "sb_scores");       // {year, typeId, subject, round, score, percentile, createdAt}
-  const colUsers  = collection(db, "sb_users");        // {password, grade, createdAt}
-  const colLogs   = collection(db, "sb_logs");         // {grade, time, createdAt}
-  const colStats  = collection(db, "sb_exam_stats");   // {year, typeId, subject, round, avg, cut1..cut9, createdAt}
-  const colUnits  = collection(db, "sb_unit_scores");  // {year, typeId, subject, round, unit, score, maxScore, createdAt}
-  const colUniv   = collection(db, "sb_univ_list");    // {year, minPercentile, university, major, note, createdAt}
-
-  const SUBJECTS = ["국어","수학","영어","화학1","생명과학1","한국사"];
-  const gradeHierarchy = { "의": 5, "치": 4, "한": 3, "약": 2, "수": 1 };
-
-  // 권한(학년도)
-  function canViewYear(grade, year){
-    if (grade === "의" || grade === "치") return true;       // 의/치: 둘 다
-    if (grade === "한" || grade === "약" || grade === "수") return year === "2027"; // 한/약/수: 2027만
-    return false;
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return defaultState();
+  try{
+    const st = JSON.parse(raw);
+    // 최소 보정
+    if(!st.types) st.types = { "2026": [], "2027": [] };
+    if(!st.univ) st.univ = { "2026": [], "2027": [] };
+    if(!st.users) st.users = [];
+    if(!st.logs) st.logs = [];
+    if(!st.scores) st.scores = [];
+    if(!st.stats) st.stats = [];
+    if(!st.units) st.units = [];
+    return st;
+  }catch{
+    return defaultState();
   }
-  function isAdmin(){ return currentGrade === "의"; }
+}
 
-  // 상태
-  let currentGrade = null;
-  let currentYear = "2027";
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
 
-  let types = [];    // {id,year,name}
-  let scores = [];   // {id,year,typeId,subject,round,score,percentile}
-  let stats = [];    // {id,year,typeId,subject,round,avg,cut1..cut9}
-  let units = [];    // {id,year,typeId,subject,round,unit,score,maxScore}
-  let univList = []; // {id,year,minPercentile,university,major,note}
-  let users = [];
-  let logs = [];
+function uid(){
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 
-  // 선택
-  let selectedTypeId = null;
-  let selectedSubject = SUBJECTS[0];
-  let selectedRound = null;
+const SUBJECTS = ["국어","수학","영어","화학1","생명과학1","한국사"];
+const gradeHierarchy = { "의": 5, "치": 4, "한": 3, "약": 2, "수": 1 };
 
-  // 차트
-  let c1=null,c2=null,c3=null,c4=null;
+function canViewYear(grade, year){
+  if(grade === "의" || grade === "치") return true;
+  if(grade === "한" || grade === "약" || grade === "수") return year === "2027";
+  return false;
+}
 
-  // 구독 해제용
-  let unsubs = [];
+/** =========================
+ *  비밀번호 해시(SHA-256)
+ *  ========================= */
+async function sha256(text){
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  const arr = Array.from(new Uint8Array(buf));
+  return arr.map(b=>b.toString(16).padStart(2,"0")).join("");
+}
 
-  const $ = (id)=>document.getElementById(id);
-  const escapeHtml = (s)=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/** =========================
+ *  전역 상태
+ *  ========================= */
+let state = loadState();
 
-  function setVisibleAfterLogin(){
-    $("loginSection").classList.add("hidden");
-    $("yearWrap").classList.remove("hidden");
-    $("pickSection").classList.remove("hidden");
-    $("chartsSection").classList.remove("hidden");
-    $("detailSection").classList.remove("hidden");
-    $("logoutBtn").classList.remove("hidden");
+let currentUser = null; // {id,name,grade}
+let currentYear = "2027";
 
-    $("manageTab").classList.toggle("hidden", !isAdmin());
-    $("scoreEditorSection").classList.toggle("hidden", !isAdmin());
-    $("manageSection").classList.add("hidden");
+let selectedTypeId = null;
+let selectedSubject = SUBJECTS[0];
+let selectedRound = null;
 
-    $("roleBadge").classList.remove("hidden");
-    $("roleBadge").textContent = `현재 등급: ${currentGrade}`;
+let c1=null,c2=null,c3=null,c4=null;
 
-    $("currentGradeLabel").textContent = currentGrade;
-    applyYearTabs();
+const $ = (id)=>document.getElementById(id);
+const escapeHtml = (s)=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/** =========================
+ *  UI 헬퍼
+ *  ========================= */
+function show(el, yes){ el.classList.toggle("hidden", !yes); }
+
+function setHello(){
+  if(!currentUser) return;
+  $("helloLine").textContent = `안녕하세요, ${currentUser.name}님`;
+}
+
+function setBadges(){
+  $("roleBadge").textContent = `현재 등급: ${currentUser.grade}`;
+  $("currentGradeLabel").textContent = currentUser.grade;
+  $("currentYearLabel").textContent = currentYear;
+}
+
+function applyYearTabs(){
+  const can26 = canViewYear(currentUser.grade,"2026");
+  const can27 = canViewYear(currentUser.grade,"2027");
+
+  $("tab2026").classList.toggle("locked", !can26);
+  $("tab2027").classList.toggle("locked", !can27);
+
+  $("tab2026").classList.toggle("active", currentYear==="2026");
+  $("tab2027").classList.toggle("active", currentYear==="2027");
+
+  $("currentYearLabel").textContent = currentYear;
+}
+
+/** =========================
+ *  초기 화면 결정
+ *  ========================= */
+function boot(){
+  // 유저가 없으면 최초 관리자 생성 화면
+  const hasUsers = state.users.length > 0;
+  show($("setupSection"), !hasUsers);
+  show($("loginSection"), hasUsers);
+
+  // 기본 화면 숨김
+  show($("yearWrap"), false);
+  show($("pickSection"), false);
+  show($("scoreEditorSection"), false);
+  show($("chartsSection"), false);
+  show($("detailSection"), false);
+  show($("manageTab"), false);
+  show($("manageSection"), false);
+  show($("logoutBtn"), false);
+  show($("roleBadge"), false);
+  show($("helloLine"), false);
+
+  if(hasUsers){
+    // 로그인 화면
+    $("pwInput").value = "";
+  }
+}
+
+boot();
+
+/** =========================
+ *  로그인/로그아웃/로그 기록
+ *  ========================= */
+function addLog(name, grade){
+  state.logs.push({ time: new Date().toLocaleString(), name, grade });
+  saveState();
+}
+
+async function loginWithPassword(pw){
+  const hash = await sha256(pw);
+  const user = state.users.find(u => u.pwHash === hash);
+  if(!user) return null;
+  return { id:user.id, name:user.name, grade:user.grade };
+}
+
+function afterLogin(){
+  show($("loginSection"), false);
+  show($("setupSection"), false);
+
+  show($("yearWrap"), true);
+  show($("pickSection"), true);
+  show($("chartsSection"), true);
+  show($("detailSection"), true);
+  show($("logoutBtn"), true);
+
+  show($("roleBadge"), true);
+  show($("helloLine"), true);
+  setHello();
+  setBadges();
+
+  const isAdmin = currentUser.grade === "의";
+  show($("manageTab"), isAdmin);
+  show($("scoreEditorSection"), isAdmin);
+
+  // 기본 시작 학년도
+  if(!canViewYear(currentUser.grade, currentYear)){
+    currentYear = "2027";
+  }
+  applyYearTabs();
+
+  // 렌더
+  renderSubjectButtons();
+  renderTypeSelect();
+  updatePickLabel();
+  renderRoundButtonsAuto();
+  updateDetail();
+  renderAllCharts();
+
+  if(isAdmin){
+    renderManageAll();
+  }
+}
+
+$("logoutBtn").addEventListener("click", ()=>{
+  currentUser = null;
+  // 리셋
+  destroyCharts();
+  boot();
+});
+
+$("loginBtn").addEventListener("click", async ()=>{
+  try{
+    const pw = $("pwInput").value.trim();
+    if(!pw) return alert("비밀번호를 입력해줘.");
+    const user = await loginWithPassword(pw);
+    if(!user) return alert("비밀번호가 틀렸습니다.");
+
+    currentUser = user;
+    addLog(user.name, user.grade);
+    afterLogin();
+  }catch(e){
+    console.error(e);
+    alert("로그인 오류가 났어. (브라우저 콘솔 F12 확인)");
+  }
+});
+
+/** =========================
+ *  최초 관리자 생성(의)
+ *  ========================= */
+$("setupBtn").addEventListener("click", async ()=>{
+  const name = $("setupName").value.trim();
+  const pw = $("setupPw").value.trim();
+  if(!name) return alert("이름을 입력해줘.");
+  if(!pw) return alert("비밀번호를 입력해줘.");
+
+  const pwHash = await sha256(pw);
+  // 최초 1명 의 생성
+  state.users.push({ id: uid(), name, grade: "의", pwHash, createdAt: Date.now() });
+  // 기본 종류도 살짝 넣어줌(비번/문구 없음)
+  if(state.types["2026"].length === 0){
+    state.types["2026"].push({ id: uid(), name: "학력평가", createdAt: Date.now() });
+    state.types["2026"].push({ id: uid(), name: "서바이벌", createdAt: Date.now() });
+  }
+  if(state.types["2027"].length === 0){
+    state.types["2027"].push({ id: uid(), name: "학력평가", createdAt: Date.now() });
+    state.types["2027"].push({ id: uid(), name: "서바이벌", createdAt: Date.now() });
+  }
+  saveState();
+  alert("관리자 생성 완료! 이제 로그인 화면에서 비밀번호로 로그인해줘.");
+  boot();
+});
+
+/** =========================
+ *  학년도 탭
+ *  ========================= */
+function handleYearClick(year){
+  if(!canViewYear(currentUser.grade, year)){
+    alert("이 등급은 해당 학년도 열람 권한이 없어요.");
+    return;
+  }
+  if(currentYear === year) return;
+  currentYear = year;
+
+  // 선택 초기화 (학년도 바뀌면 종류 id가 다를 수 있음)
+  selectedTypeId = null;
+  selectedRound = null;
+
+  destroyCharts();
+  applyYearTabs();
+
+  renderTypeSelect();
+  updatePickLabel();
+  renderRoundButtonsAuto();
+  updateDetail();
+  renderAllCharts();
+
+  if(currentUser.grade === "의"){
+    renderManageAll();
+  }
+}
+
+$("tab2026").addEventListener("click", ()=>handleYearClick("2026"));
+$("tab2027").addEventListener("click", ()=>handleYearClick("2027"));
+
+/** =========================
+ *  종류/과목/회차 선택 UI
+ *  ========================= */
+function renderTypeSelect(){
+  const sel = $("typeSelect");
+  sel.innerHTML = "";
+
+  const types = state.types[currentYear] || [];
+  if(types.length === 0){
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "종류 없음(의가 관리에서 추가)";
+    sel.appendChild(opt);
+    sel.disabled = true;
+    selectedTypeId = null;
+    return;
   }
 
-  function applyYearTabs(){
-    $("currentYearLabel").textContent = currentYear;
-
-    // 탭 활성 표시
-    $("tab2026").classList.toggle("active", currentYear==="2026");
-    $("tab2027").classList.toggle("active", currentYear==="2027");
-
-    // 잠금 표시
-    const can26 = canViewYear(currentGrade,"2026");
-    const can27 = canViewYear(currentGrade,"2027");
-
-    $("tab2026").classList.toggle("locked", !can26);
-    $("tab2027").classList.toggle("locked", !can27);
+  sel.disabled = false;
+  for(const t of types){
+    const opt = document.createElement("option");
+    opt.value = t.id;
+    opt.textContent = t.name;
+    sel.appendChild(opt);
   }
 
-  function destroyCharts(){
-    if(c1) c1.destroy(); if(c2) c2.destroy(); if(c3) c3.destroy(); if(c4) c4.destroy();
-    c1=c2=c3=c4=null;
+  if(!selectedTypeId || !types.some(t=>t.id===selectedTypeId)){
+    selectedTypeId = sel.value;
+  }else{
+    sel.value = selectedTypeId;
   }
+}
 
-  function updatePickLabel(){
-    const typeName = types.find(t=>t.id===selectedTypeId)?.name ?? "-";
-    const rnd = (selectedRound==null) ? "-" : `${selectedRound}회`;
-    $("currentPick").textContent = `${currentYear} / ${typeName} / ${selectedSubject} / ${rnd}`;
-  }
+$("typeSelect").addEventListener("change", ()=>{
+  selectedTypeId = $("typeSelect").value;
+  selectedRound = null;
+  updatePickLabel();
+  renderRoundButtonsAuto();
+  updateDetail();
+  renderAllCharts();
+});
 
-  function renderTypeSelect(){
-    const sel=$("typeSelect");
-    sel.innerHTML="";
-
-    if(types.length===0){
-      const opt=document.createElement("option");
-      opt.value="";
-      opt.textContent="종류 없음(의가 관리에서 추가)";
-      sel.appendChild(opt);
-      sel.disabled=true;
-      selectedTypeId=null;
-      updatePickLabel();
+function renderSubjectButtons(){
+  const wrap = $("subjectButtons");
+  wrap.innerHTML = "";
+  SUBJECTS.forEach(subj=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost";
+    btn.textContent = subj;
+    btn.onclick = ()=>{
+      selectedSubject = subj;
+      selectedRound = null;
+      markActiveButtons();
       renderRoundButtonsAuto();
+      updatePickLabel();
       updateDetail();
       renderAllCharts();
-      return;
-    }
-    sel.disabled=false;
-    types.forEach(t=>{
-      const opt=document.createElement("option");
-      opt.value=t.id;
-      opt.textContent=t.name;
-      sel.appendChild(opt);
-    });
+    };
+    wrap.appendChild(btn);
+  });
+  markActiveButtons();
+}
 
-    if(!selectedTypeId || !types.some(t=>t.id===selectedTypeId)){
-      selectedTypeId = sel.value;
-    }else{
-      sel.value = selectedTypeId;
-    }
+function markActiveButtons(){
+  [...$("subjectButtons").querySelectorAll("button")].forEach(b=>{
+    b.classList.toggle("active", b.textContent === selectedSubject);
+  });
+  [...$("roundButtons").querySelectorAll("button")].forEach(b=>{
+    const r = Number(b.dataset.round);
+    b.classList.toggle("active", Number.isFinite(r) && r === selectedRound);
+  });
+}
 
-    updatePickLabel();
-    renderRoundButtonsAuto();
-    updateDetail();
-    renderAllCharts();
+function getScoresInScope(){
+  return state.scores.filter(s => s.year === currentYear);
+}
+function renderRoundButtonsAuto(){
+  const wrap = $("roundButtons");
+  wrap.innerHTML = "";
+
+  if(!selectedTypeId){
+    wrap.innerHTML = `<span class="muted">종류를 먼저 선택해줘</span>`;
+    return;
   }
 
-  function renderSubjectButtons(){
-    const wrap=$("subjectButtons");
-    wrap.innerHTML="";
-    SUBJECTS.forEach(subj=>{
-      const btn=document.createElement("button");
-      btn.type="button";
-      btn.className="ghost";
-      btn.textContent=subj;
-      btn.onclick=()=>{
-        selectedSubject=subj;
-        selectedRound=null;
-        markActiveButtons();
-        renderRoundButtonsAuto();
-        updatePickLabel();
-        updateDetail();
-        renderAllCharts();
-      };
-      wrap.appendChild(btn);
-    });
+  const rounds = [...new Set(
+    getScoresInScope()
+      .filter(s => s.typeId === selectedTypeId && s.subject === selectedSubject)
+      .map(s => Number(s.round))
+      .filter(r => Number.isFinite(r))
+  )].sort((a,b)=>a-b);
+
+  if(rounds.length === 0){
+    wrap.innerHTML = `<span class="muted">저장된 회차 없음(의가 점수 저장하면 자동 생성)</span>`;
+    selectedRound = null;
     markActiveButtons();
+    return;
   }
 
-  function markActiveButtons(){
-    [...$("subjectButtons").querySelectorAll("button")].forEach(b=>{
-      b.classList.toggle("active", b.textContent===selectedSubject);
-    });
-    [...$("roundButtons").querySelectorAll("button")].forEach(b=>{
-      const r=Number(b.dataset.round);
-      b.classList.toggle("active", Number.isFinite(r) && r===selectedRound);
-    });
-  }
-
-  function renderRoundButtonsAuto(){
-    const wrap=$("roundButtons");
-    wrap.innerHTML="";
-
-    if(!selectedTypeId || !selectedSubject){
-      wrap.innerHTML=`<span class="muted">종류/과목을 먼저 선택해줘</span>`;
-      return;
-    }
-
-    const rounds=[...new Set(
-      scores
-        .filter(s=>s.typeId===selectedTypeId && s.subject===selectedSubject)
-        .map(s=>Number(s.round))
-        .filter(r=>Number.isFinite(r))
-    )].sort((a,b)=>a-b);
-
-    if(rounds.length===0){
-      wrap.innerHTML=`<span class="muted">저장된 회차 없음(의가 점수 저장하면 자동 생성)</span>`;
-      selectedRound=null;
+  rounds.forEach(r=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost";
+    btn.textContent = `${r}회`;
+    btn.dataset.round = String(r);
+    btn.onclick = ()=>{
+      selectedRound = r;
       markActiveButtons();
       updatePickLabel();
       updateDetail();
       renderAllCharts();
-      return;
+    };
+    wrap.appendChild(btn);
+  });
+
+  if(selectedRound == null) selectedRound = rounds[0];
+  markActiveButtons();
+}
+
+function updatePickLabel(){
+  const typeName = (state.types[currentYear]||[]).find(t=>t.id===selectedTypeId)?.name ?? "-";
+  const rnd = (selectedRound == null) ? "-" : `${selectedRound}회`;
+  $("currentPick").textContent = `${currentYear} / ${typeName} / ${selectedSubject} / ${rnd}`;
+}
+
+/** =========================
+ *  점수/통계/단원/대학 데이터 읽기
+ *  ========================= */
+function getMyScoreDoc(){
+  if(!selectedTypeId || selectedRound==null) return null;
+  return getScoresInScope().find(s =>
+    s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)
+  ) ?? null;
+}
+function getStatDoc(){
+  if(!selectedTypeId || selectedRound==null) return null;
+  return state.stats.find(s =>
+    s.year===currentYear && s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)
+  ) ?? null;
+}
+function getUnitDocs(){
+  if(!selectedTypeId || selectedRound==null) return [];
+  return state.units
+    .filter(u => u.year===currentYear && u.typeId===selectedTypeId && u.subject===selectedSubject && Number(u.round)===Number(selectedRound))
+    .slice()
+    .sort((a,b)=>(a.unit||"").localeCompare(b.unit||"", "ko"));
+}
+
+/** =========================
+ *  상세 표시 + 대학 카드
+ *  ========================= */
+function updateDetail(){
+  const my = getMyScoreDoc();
+  $("myScoreLabel").textContent = my ? String(my.score) : "-";
+  $("myPctLabel").textContent = (my && my.percentile!=null) ? String(my.percentile) : "-";
+
+  const st = getStatDoc();
+  $("avgLabel").textContent = (st && st.avg!=null) ? String(st.avg) : "-";
+
+  const ud = getUnitDocs();
+  const tb = $("unitTable");
+  tb.innerHTML = "";
+  if(ud.length === 0){
+    tb.innerHTML = `<tr><td colspan="3" class="muted">단원 데이터 없음(의가 관리에서 추가)</td></tr>`;
+  }else{
+    ud.forEach(x=>{
+      tb.innerHTML += `<tr><td>${escapeHtml(x.unit)}</td><td>${x.score ?? "-"}</td><td>${x.maxScore ?? "-"}</td></tr>`;
+    });
+  }
+
+  renderUniversityCards();
+}
+
+function renderUniversityCards(){
+  const box = $("univCards");
+  if(!box) return;
+
+  if(!currentUser || gradeHierarchy[currentUser.grade] < gradeHierarchy["한"]){
+    box.innerHTML = `<div class="muted">한 등급 이상부터 대학 추천을 볼 수 있어요.</div>`;
+    return;
+  }
+
+  const my = getMyScoreDoc();
+  const myPct = my?.percentile;
+  if(myPct == null || !Number.isFinite(Number(myPct))){
+    box.innerHTML = `<div class="muted">내 백분위를 저장하면 추천이 떠요.</div>`;
+    return;
+  }
+
+  const pct = Number(myPct);
+  const list = (state.univ[currentYear]||[])
+    .filter(u => Number(u.minPercentile) <= pct)
+    .sort((a,b)=>Number(b.minPercentile)-Number(a.minPercentile))
+    .slice(0,12);
+
+  if(list.length === 0){
+    box.innerHTML = `<div class="muted">현재 백분위(${pct})로 추천할 데이터가 없어요. (의가 대학 데이터 추가 필요)</div>`;
+    return;
+  }
+
+  box.innerHTML = list.map(u=>`
+    <div class="card">
+      <div class="t">${escapeHtml(u.university)}${u.major?` · ${escapeHtml(u.major)}`:""}</div>
+      <div class="d">필요 백분위 ≥ <b>${u.minPercentile}</b></div>
+      ${u.note?`<div class="muted" style="margin-top:6px">${escapeHtml(u.note)}</div>`:""}
+    </div>
+  `).join("");
+}
+
+/** =========================
+ *  차트
+ *  ========================= */
+function destroyCharts(){
+  if(c1) c1.destroy(); if(c2) c2.destroy(); if(c3) c3.destroy(); if(c4) c4.destroy();
+  c1=c2=c3=c4=null;
+}
+
+function renderChart1(){
+  const rows = getScoresInScope()
+    .filter(s => s.typeId===selectedTypeId && s.subject===selectedSubject)
+    .map(s => ({ r:Number(s.round), v:Number(s.score) }))
+    .filter(x => Number.isFinite(x.r) && Number.isFinite(x.v))
+    .sort((a,b)=>a.r-b.r);
+
+  const labels = rows.map(x=>`${x.r}회`);
+  const values = rows.map(x=>x.v);
+
+  c1 = new Chart($("chart1").getContext("2d"),{
+    type:"line",
+    data:{labels,datasets:[{label:`${selectedSubject} 점수`,data:values,fill:false}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true}}}
+  });
+}
+
+function renderChart2(){
+  const typesMap = new Map((state.types[currentYear]||[]).map(t=>[t.id,t.name]));
+  const rows = getScoresInScope()
+    .filter(s => s.subject===selectedSubject)
+    .slice()
+    .sort((a,b)=>(a.updatedAt||0)-(b.updatedAt||0));
+
+  const labels = rows.map(s=>{
+    const tn = typesMap.get(s.typeId) || "?";
+    return `${tn} ${s.round}회`;
+  });
+  const values = rows.map(s=>Number(s.score));
+
+  c2 = new Chart($("chart2").getContext("2d"),{
+    type:"line",
+    data:{labels,datasets:[{label:`전체 ${selectedSubject} 추이`,data:values,fill:false}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true}}}
+  });
+}
+
+function renderChart3(){
+  const my = getMyScoreDoc();
+  const st = getStatDoc();
+  const myScore = my ? Number(my.score) : null;
+  const avg = (st && st.avg!=null) ? Number(st.avg) : null;
+
+  const labels = [];
+  const values = [];
+  if(myScore!=null && Number.isFinite(myScore)){ labels.push("내 점수"); values.push(myScore); }
+  if(avg!=null && Number.isFinite(avg)){ labels.push("평균"); values.push(avg); }
+
+  const cuts = [];
+  if(st){
+    for(let i=1;i<=9;i++){
+      const v = st["cut"+i];
+      if(v!=null && v!=="" && Number.isFinite(Number(v))) cuts.push({grade:i, value:Number(v)});
     }
-
-    rounds.forEach(r=>{
-      const btn=document.createElement("button");
-      btn.type="button";
-      btn.className="ghost";
-      btn.textContent=`${r}회`;
-      btn.dataset.round=String(r);
-      btn.onclick=()=>{
-        selectedRound=r;
-        markActiveButtons();
-        updatePickLabel();
-        updateDetail();
-        renderAllCharts();
-      };
-      wrap.appendChild(btn);
-    });
-
-    if(selectedRound==null) selectedRound=rounds[0];
-    markActiveButtons();
   }
 
-  function getMyScoreDoc(){
-    if(!selectedTypeId || !selectedSubject || selectedRound==null) return null;
-    return scores.find(s=>s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)) ?? null;
-  }
-  function getStatDoc(){
-    if(!selectedTypeId || !selectedSubject || selectedRound==null) return null;
-    return stats.find(s=>s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)) ?? null;
-  }
-  function getUnitDocs(){
-    if(!selectedTypeId || !selectedSubject || selectedRound==null) return [];
-    return units
-      .filter(u=>u.typeId===selectedTypeId && u.subject===selectedSubject && Number(u.round)===Number(selectedRound))
-      .slice()
-      .sort((a,b)=>(a.unit||"").localeCompare(b.unit||"", "ko"));
-  }
-
-  function updateDetail(){
-    const my=getMyScoreDoc();
-    $("myScoreLabel").textContent=my?String(my.score):"-";
-    $("myPctLabel").textContent=(my && my.percentile!=null)?String(my.percentile):"-";
-
-    const st=getStatDoc();
-    $("avgLabel").textContent=(st && st.avg!=null)?String(st.avg):"-";
-
-    // 단원표
-    const ud=getUnitDocs();
-    const tb=$("unitTable");
-    tb.innerHTML="";
-    if(ud.length===0){
-      tb.innerHTML=`<tr><td colspan="3" class="muted">단원 데이터 없음(의가 관리에서 추가)</td></tr>`;
-    }else{
-      ud.forEach(x=>{
-        tb.innerHTML += `<tr><td>${escapeHtml(x.unit)}</td><td>${x.score ?? "-"}</td><td>${x.maxScore ?? "-"}</td></tr>`;
-      });
-    }
-
-    renderUniversityCards();
-  }
-
-  function renderChart1(){
-    const rows=scores
-      .filter(s=>s.typeId===selectedTypeId && s.subject===selectedSubject)
-      .map(s=>({r:Number(s.round), v:Number(s.score)}))
-      .filter(x=>Number.isFinite(x.r) && Number.isFinite(x.v))
-      .sort((a,b)=>a.r-b.r);
-
-    const labels=rows.map(x=>`${x.r}회`);
-    const values=rows.map(x=>x.v);
-
-    c1=new Chart($("chart1").getContext("2d"),{
-      type:"line",
-      data:{labels,datasets:[{label:`${selectedSubject} 점수`,data:values,fill:false}]},
-      options:{responsive:true,scales:{y:{beginAtZero:true}}}
-    });
-  }
-
-  function renderChart2(){
-    const rows=scores
-      .filter(s=>s.subject===selectedSubject)
-      .slice()
-      .sort((a,b)=>{
-        const ta=a.createdAt?.seconds??0;
-        const tb=b.createdAt?.seconds??0;
-        return ta-tb;
-      });
-
-    const labels=rows.map(s=>{
-      const tn=types.find(t=>t.id===s.typeId)?.name ?? "?";
-      return `${tn} ${s.round}회`;
-    });
-    const values=rows.map(s=>Number(s.score));
-
-    c2=new Chart($("chart2").getContext("2d"),{
-      type:"line",
-      data:{labels,datasets:[{label:`전체 ${selectedSubject} 추이`,data:values,fill:false}]},
-      options:{responsive:true,scales:{y:{beginAtZero:true}}}
-    });
-  }
-
-  function renderChart3(){
-    const my=getMyScoreDoc();
-    const st=getStatDoc();
-
-    const myScore=my?Number(my.score):null;
-    const avg=(st && st.avg!=null)?Number(st.avg):null;
-
-    const labels=[];
-    const values=[];
-    if(myScore!=null && Number.isFinite(myScore)){labels.push("내 점수");values.push(myScore);}
-    if(avg!=null && Number.isFinite(avg)){labels.push("평균");values.push(avg);}
-
-    const cuts=[];
-    if(st){
-      for(let i=1;i<=9;i++){
-        const v=st[`cut${i}`];
-        if(v!=null && v!=="" && Number.isFinite(Number(v))) cuts.push({grade:i,value:Number(v)});
-      }
-    }
-
-    c3=new Chart($("chart3").getContext("2d"),{
-      type:"bar",
-      data:{labels,datasets:[{label:`${selectedSubject} 비교`,data:values}]},
-      options:{responsive:true,scales:{y:{beginAtZero:true}}},
-      plugins:[{
-        id:"cutLines",
-        afterDatasetsDraw(chart){
-          const {ctx,chartArea:{left,right},scales:{y}}=chart;
-          ctx.save();
+  c3 = new Chart($("chart3").getContext("2d"),{
+    type:"bar",
+    data:{labels,datasets:[{label:`${selectedSubject} 비교`,data:values}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true}}},
+    plugins:[{
+      id:"cutLines",
+      afterDatasetsDraw(chart){
+        const {ctx,chartArea:{left,right},scales:{y}}=chart;
+        ctx.save();
+        ctx.setLineDash([6,6]);
+        ctx.lineWidth=1;
+        cuts.forEach(c=>{
+          const yPos = y.getPixelForValue(c.value);
+          ctx.beginPath(); ctx.moveTo(left,yPos); ctx.lineTo(right,yPos); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle="#374151";
+          ctx.font="12px system-ui";
+          ctx.fillText(`${c.grade}컷 ${c.value}`, left+6, yPos-4);
           ctx.setLineDash([6,6]);
-          ctx.lineWidth=1;
-          cuts.forEach(c=>{
-            const yPos=y.getPixelForValue(c.value);
-            ctx.beginPath(); ctx.moveTo(left,yPos); ctx.lineTo(right,yPos); ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle="#374151";
-            ctx.font="12px system-ui";
-            ctx.fillText(`${c.grade}컷 ${c.value}`, left+6, yPos-4);
-            ctx.setLineDash([6,6]);
-          });
-          ctx.restore();
-        }
-      }]
-    });
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function renderChart4(){
+  const ud = getUnitDocs();
+  const labels = ud.map(x=>x.unit);
+  const values = ud.map(x=>Number(x.score));
+  c4 = new Chart($("chart4").getContext("2d"),{
+    type:"bar",
+    data:{labels,datasets:[{label:`단원별 ${selectedSubject}`,data:values}]},
+    options:{responsive:true,scales:{y:{beginAtZero:true}}}
+  });
+}
+
+function renderAllCharts(){
+  destroyCharts();
+  if(!selectedTypeId) return;
+  renderChart1();
+  renderChart2();
+  renderChart3();
+  renderChart4();
+}
+
+/** =========================
+ *  의 전용: 점수 저장/업데이트
+ *  ========================= */
+$("saveScoreBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade !== "의") return;
+
+  if(!selectedTypeId || selectedRound==null){
+    alert("종류/회차를 먼저 선택해줘.");
+    return;
   }
 
-  function renderChart4(){
-    const ud=getUnitDocs();
-    const labels=ud.map(x=>x.unit);
-    const values=ud.map(x=>Number(x.score));
+  const score = parseInt($("scoreInput").value,10);
+  if(Number.isNaN(score)) return alert("점수를 숫자로 입력해줘.");
 
-    c4=new Chart($("chart4").getContext("2d"),{
-      type:"bar",
-      data:{labels,datasets:[{label:`단원별 ${selectedSubject}`,data:values}]},
-      options:{responsive:true,scales:{y:{beginAtZero:true}}}
-    });
-  }
+  const pctRaw = $("percentileInput").value.trim();
+  const percentile = (pctRaw==="") ? null : parseInt(pctRaw,10);
 
-  function renderAllCharts(){
-    if(!selectedSubject) return;
-    destroyCharts();
-    // type 없으면 1/3/4는 비어도 그리기 가능하지만, 그냥 안전 처리
-    if(types.length===0) return;
-    renderChart1();
-    renderChart2();
-    renderChart3();
-    renderChart4();
-  }
-
-  async function upsertMyScore(){
-    if(!isAdmin()) return;
-    if(!selectedTypeId || !selectedSubject || selectedRound==null) return alert("종류/과목/회차를 먼저 선택해줘.");
-    const score=parseInt($("scoreInput").value,10);
-    if(Number.isNaN(score)) return alert("점수를 숫자로 입력해줘.");
-
-    const pctRaw=$("percentileInput").value.trim();
-    const percentile=(pctRaw==="")?null:parseInt(pctRaw,10);
-
-    const existing=getMyScoreDoc();
-    if(existing){
-      await updateDoc(doc(db,"sb_scores",existing.id),{score,percentile});
-    }else{
-      await addDoc(colScores,{
-        year: currentYear,
-        typeId: selectedTypeId,
-        subject: selectedSubject,
-        round: Number(selectedRound),
-        score,
-        percentile,
-        createdAt: serverTimestamp()
-      });
-    }
-    $("scoreInput").value="";
-    $("percentileInput").value="";
-  }
-
-  async function logLogin(grade){
-    await addDoc(colLogs,{grade,time:new Date().toLocaleString(),createdAt:serverTimestamp()});
-  }
-
-  // 대학 카드 (한 이상만 표시)
-  function renderUniversityCards(){
-    const box=$("univCards");
-    if(!box) return;
-
-    if(!currentGrade || gradeHierarchy[currentGrade] < gradeHierarchy["한"]){
-      box.innerHTML = `<div class="muted">한 등급 이상부터 대학 추천을 볼 수 있어요.</div>`;
-      return;
-    }
-
-    const my=getMyScoreDoc();
-    const myPct=my?.percentile;
-    if(myPct==null || !Number.isFinite(Number(myPct))){
-      box.innerHTML = `<div class="muted">내 백분위를 저장하면 추천이 떠요.</div>`;
-      return;
-    }
-
-    const pct=Number(myPct);
-    const matched = univList
-      .filter(u=>Number(u.minPercentile) <= pct)
-      .sort((a,b)=>Number(b.minPercentile)-Number(a.minPercentile))
-      .slice(0,12);
-
-    if(matched.length===0){
-      box.innerHTML = `<div class="muted">현재 백분위(${pct})로 추천할 데이터가 없어요. (의가 대학 데이터 추가 필요)</div>`;
-      return;
-    }
-
-    box.innerHTML = matched.map(u=>`
-      <div class="card">
-        <div class="t">${escapeHtml(u.university)}${u.major?` · ${escapeHtml(u.major)}`:""}</div>
-        <div class="d">필요 백분위 ≥ <b>${u.minPercentile}</b></div>
-        ${u.note?`<div class="muted" style="margin-top:6px">${escapeHtml(u.note)}</div>`:""}
-      </div>
-    `).join("");
-  }
-
-  // 관리: 종류 목록
-  function renderTypeList(){
-    if(!isAdmin()) return;
-    const wrap=$("typeList");
-    if(types.length===0){wrap.textContent="등록된 종류 없음";return;}
-    wrap.innerHTML = types.map(t=>`
-      <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin:6px 0;">
-        <div>• <b>${escapeHtml(t.name)}</b> <span class="muted">(${t.year})</span></div>
-        <button class="danger" type="button" onclick="deleteType('${t.id}')">삭제</button>
-      </div>
-    `).join("");
-  }
-  window.deleteType = async (typeId)=>{
-    if(!isAdmin()) return;
-    const hasScore = scores.some(s=>s.typeId===typeId);
-    if(hasScore) return alert("이 종류 점수가 있어서 삭제 불가(점수 먼저 삭제해야 함)");
-    await deleteDoc(doc(db,"sb_types",typeId));
-  };
-
-  // 관리: 유저 목록(의만 비번 원문 확인 가능)
-  function renderUsers(){
-    if(!isAdmin()) return;
-    const wrap=$("userList");
-    wrap.innerHTML="";
-    users.forEach(u=>{
-      const div=document.createElement("div");
-      div.className="card";
-      div.innerHTML = `
-        <div class="t">비밀번호: <b>${escapeHtml(u.password)}</b></div>
-        <div class="d">등급: <b>${escapeHtml(u.grade)}</b></div>
-        <button class="danger" type="button" style="margin-top:8px" onclick="removeUser('${u.id}')">삭제</button>
-      `;
-      wrap.appendChild(div);
-    });
-  }
-  window.removeUser = async (id)=>{
-    if(!isAdmin()) return;
-    await deleteDoc(doc(db,"sb_users",id));
-  };
-
-  function renderLogs(){
-    if(!isAdmin()) return;
-    const box=$("loginRecords");
-    if(logs.length===0){box.textContent="기록 없음";return;}
-    box.innerHTML = logs.slice().reverse().map(l=>`• [${escapeHtml(l.time)}] 등급: ${escapeHtml(l.grade)}`).join("<br/>");
-  }
-
-  async function upsertStats(){
-    if(!isAdmin()) return;
-    if(!selectedTypeId || !selectedSubject || selectedRound==null) return alert("종류/과목/회차를 먼저 선택해줘.");
-
-    const avgRaw=$("statAvg").value.trim();
-    const avg=(avgRaw==="")?null:Number(avgRaw);
-
-    const data={
+  const existing = getMyScoreDoc();
+  if(existing){
+    existing.score = score;
+    existing.percentile = percentile;
+    existing.updatedAt = Date.now();
+  }else{
+    state.scores.push({
+      id: uid(),
       year: currentYear,
       typeId: selectedTypeId,
       subject: selectedSubject,
       round: Number(selectedRound),
-      avg: (avg==null||Number.isNaN(avg))?null:avg,
-      createdAt: serverTimestamp()
-    };
-
-    for(let i=1;i<=9;i++){
-      const v=$(`cut${i}`).value.trim();
-      data[`cut${i}`] = (v==="")?null:Number(v);
-      if(Number.isNaN(data[`cut${i}`])) data[`cut${i}`]=null;
-    }
-
-    const existing=getStatDoc();
-    if(existing){
-      await updateDoc(doc(db,"sb_exam_stats",existing.id),data);
-    }else{
-      await addDoc(colStats,data);
-    }
-  }
-
-  async function addUnit(){
-    if(!isAdmin()) return;
-    if(!selectedTypeId || !selectedSubject || selectedRound==null) return alert("종류/과목/회차를 먼저 선택해줘.");
-
-    const unit=$("unitName").value.trim();
-    const scoreRaw=$("unitScore").value.trim();
-    const maxRaw=$("unitMax").value.trim();
-
-    if(!unit) return alert("단원명을 입력해줘.");
-    const score=Number(scoreRaw);
-    if(!Number.isFinite(score)) return alert("단원 점수를 숫자로 입력해줘.");
-
-    const maxScore=(maxRaw==="")?null:Number(maxRaw);
-    await addDoc(colUnits,{
-      year: currentYear,
-      typeId:selectedTypeId,
-      subject:selectedSubject,
-      round:Number(selectedRound),
-      unit,
       score,
-      maxScore:(maxScore!=null && Number.isFinite(maxScore))?maxScore:null,
-      createdAt: serverTimestamp()
+      percentile,
+      updatedAt: Date.now()
     });
-
-    $("unitName").value="";
-    $("unitScore").value="";
-    $("unitMax").value="";
   }
 
-  async function importUniv(){
-    if(!isAdmin()) return;
-    const text=$("univPaste").value.trim();
-    if(!text) return alert("붙여넣을 데이터가 없어.");
+  saveState();
+  $("scoreInput").value="";
+  $("percentileInput").value="";
 
-    const lines=text.split("\n").map(l=>l.trim()).filter(Boolean);
-    for(const line of lines){
-      const parts=line.split(",").map(x=>x.trim());
-      if(parts.length<2) continue;
+  renderRoundButtonsAuto();
+  updatePickLabel();
+  updateDetail();
+  renderAllCharts();
 
-      const minPercentile=Number(parts[0]);
-      const university=parts[1]??"";
-      const major=parts[2]??"";
-      const note=parts[3]??"";
+  if(currentUser.grade==="의") renderManageAll();
+});
 
-      if(!Number.isFinite(minPercentile) || !university) continue;
+/** =========================
+ *  관리(의 전용)
+ *  ========================= */
+$("manageTab").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  $("manageSection").classList.toggle("hidden");
+  renderManageAll();
+  $("manageSection").scrollIntoView({behavior:"smooth", block:"start"});
+});
 
-      await addDoc(colUniv,{
-        year: currentYear,
-        minPercentile,
-        university,
-        major,
-        note,
-        createdAt: serverTimestamp()
-      });
-    }
+function renderManageAll(){
+  renderTypeList();
+  renderUserList();
+  renderLogs();
+}
 
-    $("univPaste").value="";
-    alert("대학 데이터 저장 완료!");
-  }
+function renderTypeList(){
+  const wrap = $("typeList");
+  const list = state.types[currentYear] || [];
+  if(list.length===0){ wrap.textContent="등록된 종류 없음"; return; }
 
-  async function clearUniv(){
-    if(!isAdmin()) return;
-    const snap=await getDocs(query(colUniv, where("year","==",currentYear)));
-    await Promise.all(snap.docs.map(d=>deleteDoc(doc(db,"sb_univ_list",d.id))));
-  }
+  wrap.innerHTML = list.map(t=>`
+    <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin:6px 0;">
+      <div>• <b>${escapeHtml(t.name)}</b></div>
+      <button class="danger" type="button" data-deltype="${t.id}">삭제</button>
+    </div>
+  `).join("");
 
-  // ====== 실시간 구독(학년도 바뀌면 재구독) ======
-  function stopRealtime(){
-    unsubs.forEach(fn=>{ try{fn();}catch{} });
-    unsubs=[];
-  }
-
-  function startRealtimeForYear(year){
-    stopRealtime();
-    currentYear = year;
-    applyYearTabs();
-
-    // types (year)
-    unsubs.push(onSnapshot(query(colTypes, where("year","==",currentYear), orderBy("createdAt","asc")), snap=>{
-      types = snap.docs.map(d=>({id:d.id, ...d.data()}));
+  wrap.querySelectorAll("button[data-deltype]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-deltype");
+      // 이 종류로 저장된 점수가 있으면 삭제 막기
+      const hasScore = state.scores.some(s=>s.year===currentYear && s.typeId===id);
+      if(hasScore) return alert("이 종류 점수가 있어서 삭제 불가(점수 먼저 삭제해야 함)");
+      state.types[currentYear] = (state.types[currentYear]||[]).filter(x=>x.id!==id);
+      saveState();
       renderTypeSelect();
-      if(isAdmin()) renderTypeList();
-    }));
+      renderTypeList();
+    });
+  });
+}
 
-    // scores (year)
-    unsubs.push(onSnapshot(query(colScores, where("year","==",currentYear), orderBy("createdAt","asc")), snap=>{
-      scores = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      renderRoundButtonsAuto();
-      updatePickLabel();
-      updateDetail();
-      renderAllCharts();
-    }));
+$("addTypeBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  const name = $("newTypeInput").value.trim();
+  if(!name) return alert("종류 이름을 입력해줘.");
+  const list = state.types[currentYear] || [];
+  if(list.some(t=>t.name===name)) return alert("이미 있는 종류야.");
+  list.push({ id: uid(), name, createdAt: Date.now() });
+  state.types[currentYear] = list;
+  saveState();
+  $("newTypeInput").value="";
+  renderTypeSelect();
+  renderTypeList();
+});
 
-    // stats (year)
-    unsubs.push(onSnapshot(query(colStats, where("year","==",currentYear), orderBy("createdAt","asc")), snap=>{
-      stats = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      updateDetail();
-      renderAllCharts();
-    }));
+async function addUser(){
+  const name = $("newUserName").value.trim();
+  const pw = $("newPw").value.trim();
+  const grade = $("newGrade").value;
+  if(!name) return alert("이름을 입력해줘.");
+  if(!pw) return alert("비밀번호를 입력해줘.");
 
-    // units (year)
-    unsubs.push(onSnapshot(query(colUnits, where("year","==",currentYear), orderBy("createdAt","asc")), snap=>{
-      units = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      updateDetail();
-      renderAllCharts();
-    }));
+  const pwHash = await sha256(pw);
+  if(state.users.some(u=>u.pwHash===pwHash)) return alert("이미 같은 비밀번호가 등록되어 있어.");
 
-    // univ (year)
-    unsubs.push(onSnapshot(query(colUniv, where("year","==",currentYear), orderBy("minPercentile","desc")), snap=>{
-      univList = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      renderUniversityCards();
-    }));
+  state.users.push({ id: uid(), name, grade, pwHash, createdAt: Date.now() });
+  saveState();
+  $("newUserName").value="";
+  $("newPw").value="";
+  renderUserList();
+}
 
-    // users/logs는 학년도 무관(전체)
-    unsubs.push(onSnapshot(query(colUsers, orderBy("createdAt","asc")), snap=>{
-      users = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      if(isAdmin()) renderUsers();
-    }));
-    unsubs.push(onSnapshot(query(colLogs, orderBy("createdAt","asc")), snap=>{
-      logs = snap.docs.map(d=>({id:d.id, ...d.data()}));
-      if(isAdmin()) renderLogs();
-    }));
+$("addUserBtn").addEventListener("click", ()=>{ addUser(); });
+
+function renderUserList(){
+  const wrap = $("userList");
+  wrap.innerHTML = "";
+  state.users.forEach(u=>{
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `
+      <div class="t">${escapeHtml(u.name)}</div>
+      <div class="d">등급: <b>${escapeHtml(u.grade)}</b></div>
+      <button class="danger" type="button" data-deluser="${u.id}" style="margin-top:8px">삭제</button>
+    `;
+    wrap.appendChild(div);
+  });
+
+  wrap.querySelectorAll("button[data-deluser]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-deluser");
+      if(state.users.length===1) return alert("최소 1명(관리자)은 남겨야 해.");
+      state.users = state.users.filter(u=>u.id!==id);
+      saveState();
+      renderUserList();
+    });
+  });
+}
+
+function renderLogs(){
+  const box = $("loginRecords");
+  if(state.logs.length===0){ box.textContent="기록 없음"; return; }
+  box.innerHTML = state.logs.slice().reverse().map(l=>`• [${escapeHtml(l.time)}] ${escapeHtml(l.name)} (${escapeHtml(l.grade)})`).join("<br/>");
+}
+
+$("clearLogsBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  state.logs = [];
+  saveState();
+  renderLogs();
+});
+
+/** 통계 저장/업데이트 */
+$("saveStatsBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  if(!selectedTypeId || selectedRound==null) return alert("종류/회차를 먼저 선택해줘.");
+
+  const avgRaw = $("statAvg").value.trim();
+  const avg = (avgRaw==="") ? null : Number(avgRaw);
+
+  const data = {
+    id: uid(),
+    year: currentYear,
+    typeId: selectedTypeId,
+    subject: selectedSubject,
+    round: Number(selectedRound),
+    avg: (avg==null || Number.isNaN(avg)) ? null : avg,
+    updatedAt: Date.now()
+  };
+
+  for(let i=1;i<=9;i++){
+    const v = $("cut"+i).value.trim();
+    data["cut"+i] = (v==="") ? null : Number(v);
+    if(Number.isNaN(data["cut"+i])) data["cut"+i]=null;
   }
 
-  // ====== 이벤트 ======
-  $("typeSelect").addEventListener("change", ()=>{
-    selectedTypeId = $("typeSelect").value;
-    selectedRound = null;
-    updatePickLabel();
-    renderRoundButtonsAuto();
-    updateDetail();
-    renderAllCharts();
-  });
-
-  $("saveScoreBtn").addEventListener("click", upsertMyScore);
-
-  $("loginBtn").addEventListener("click", async ()=>{
-    const entered = $("pwInput").value.trim();
-    if(!entered) return alert("비밀번호를 입력해줘.");
-
-    // users에서 찾기
-    const snap = await getDocs(colUsers);
-    const list = snap.docs.map(d=>({id:d.id, ...d.data()}));
-    const found = list.find(u=>u.password === entered);
-    if(!found) return alert("비밀번호가 틀렸습니다.");
-
-    currentGrade = found.grade;
-    await logLogin(currentGrade);
-
-    setVisibleAfterLogin();
-    renderSubjectButtons();
-    updatePickLabel();
-
-    // 로그인 후 기본 년도 선택 로직:
-    // - 한/약/수는 2026 불가이므로 2027로 강제
-    // - 의/치는 최근 사용 목적상 기본 2027로 시작
-    const startYear = canViewYear(currentGrade,"2027") ? "2027" : "2026";
-    startRealtimeForYear(startYear);
-  });
-
-  $("logoutBtn").addEventListener("click", ()=>location.reload());
-
-  $("manageTab").addEventListener("click", ()=>{
-    if(!isAdmin()) return;
-    $("manageSection").classList.toggle("hidden");
-    renderTypeList();
-    renderUsers();
-    renderLogs();
-    $("manageSection").scrollIntoView({behavior:"smooth", block:"start"});
-  });
-
-  $("addTypeBtn").addEventListener("click", async ()=>{
-    if(!isAdmin()) return;
-    const name = $("newTypeInput").value.trim();
-    if(!name) return alert("종류 이름을 입력해줘.");
-    if(types.some(t=>t.name===name)) return alert("이미 있는 종류야.");
-    await addDoc(colTypes,{year: currentYear, name, createdAt: serverTimestamp()});
-    $("newTypeInput").value="";
-  });
-
-  $("addUserBtn").addEventListener("click", async ()=>{
-    if(!isAdmin()) return;
-    const pw = $("newPw").value.trim();
-    const grade = $("newGrade").value;
-    if(!pw) return alert("비밀번호를 입력해줘.");
-    if(users.some(u=>u.password===pw)) return alert("이미 있는 비밀번호야.");
-    await addDoc(colUsers,{password: pw, grade, createdAt: serverTimestamp()});
-    $("newPw").value="";
-  });
-
-  $("clearLogsBtn").addEventListener("click", async ()=>{
-    if(!isAdmin()) return;
-    const snap = await getDocs(colLogs);
-    await Promise.all(snap.docs.map(d=>deleteDoc(doc(db,"sb_logs",d.id))));
-  });
-
-  $("saveStatsBtn").addEventListener("click", upsertStats);
-  $("addUnitBtn").addEventListener("click", addUnit);
-  $("importUnivBtn").addEventListener("click", importUniv);
-  $("clearUnivBtn").addEventListener("click", clearUniv);
-
-  // 학년도 탭 클릭
-  function handleYearClick(year){
-    if(!canViewYear(currentGrade, year)){
-      alert("이 등급은 해당 학년도 열람 권한이 없어요.");
-      return;
-    }
-    if(currentYear === year) return;
-    // 선택값들 초기화(학년도 바뀌면 데이터 다르니까)
-    selectedTypeId = null;
-    selectedRound = null;
-    destroyCharts();
-    startRealtimeForYear(year);
-    updatePickLabel();
+  const existing = getStatDoc();
+  if(existing){
+    Object.assign(existing, data);
+    existing.id = existing.id; // 유지
+  }else{
+    // 동일 키(연도/종류/과목/회차) 하나만 유지
+    state.stats.push(data);
   }
 
-  $("tab2026").addEventListener("click", ()=>handleYearClick("2026"));
-  $("tab2027").addEventListener("click", ()=>handleYearClick("2027"));
+  // 동일 조합 중복 제거
+  state.stats = state.stats.filter((s, idx, arr)=>{
+    const same = arr.findIndex(x => x.year===s.year && x.typeId===s.typeId && x.subject===s.subject && Number(x.round)===Number(s.round));
+    return same === idx;
+  });
+
+  saveState();
+  updateDetail();
+  renderAllCharts();
+});
+
+/** 단원 추가 */
+$("addUnitBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  if(!selectedTypeId || selectedRound==null) return alert("종류/회차를 먼저 선택해줘.");
+
+  const unit = $("unitName").value.trim();
+  const scoreRaw = $("unitScore").value.trim();
+  const maxRaw = $("unitMax").value.trim();
+
+  if(!unit) return alert("단원명을 입력해줘.");
+  const score = Number(scoreRaw);
+  if(!Number.isFinite(score)) return alert("단원 점수를 숫자로 입력해줘.");
+
+  const maxScore = (maxRaw==="") ? null : Number(maxRaw);
+
+  state.units.push({
+    id: uid(),
+    year: currentYear,
+    typeId: selectedTypeId,
+    subject: selectedSubject,
+    round: Number(selectedRound),
+    unit,
+    score,
+    maxScore: (maxScore!=null && Number.isFinite(maxScore)) ? maxScore : null,
+    updatedAt: Date.now()
+  });
+
+  saveState();
+  $("unitName").value="";
+  $("unitScore").value="";
+  $("unitMax").value="";
+  updateDetail();
+  renderAllCharts();
+});
+
+/** 대학 데이터 저장/삭제 */
+$("importUnivBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  const text = $("univPaste").value.trim();
+  if(!text) return alert("붙여넣을 데이터가 없어.");
+
+  const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+  const list = state.univ[currentYear] || [];
+
+  for(const line of lines){
+    const parts = line.split(",").map(x=>x.trim());
+    if(parts.length < 2) continue;
+    const minPercentile = Number(parts[0]);
+    const university = parts[1] || "";
+    const major = parts[2] || "";
+    const note = parts[3] || "";
+    if(!Number.isFinite(minPercentile) || !university) continue;
+
+    list.push({ id: uid(), year: currentYear, minPercentile, university, major, note, createdAt: Date.now() });
+  }
+
+  state.univ[currentYear] = list;
+  saveState();
+  $("univPaste").value="";
+  alert("대학 데이터 저장 완료!");
+  renderUniversityCards();
+});
+
+$("clearUnivBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  state.univ[currentYear] = [];
+  saveState();
+  renderUniversityCards();
+});
+
+/** 전체 초기화 */
+$("resetAllBtn").addEventListener("click", ()=>{
+  if(!currentUser || currentUser.grade!=="의") return;
+  if(!confirm("진짜로 전체 데이터를 삭제할까? (복구 불가)")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = loadState();
+  currentUser = null;
+  destroyCharts();
+  alert("삭제 완료. 새로 시작합니다.");
+  boot();
+});
+
+/** =========================
+ *  최초 관리자 만들고 로그인하면 적용
+ *  ========================= */
+$("manageTab").classList.add("hidden");
 </script>
 </body>
 </html>
