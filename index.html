@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ScoreBoard v5</title>
+  <title>ScoreBoard v6</title>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -68,6 +68,13 @@
     .logo-circle{width:36px;height:36px;border-radius:999px;background:#eef2ff;display:flex;align-items:center;justify-content:center;font-weight:900;color:#3730a3;border:1px solid #c7d2fe}
     .card-row{display:flex;gap:10px;align-items:center}
     .right{margin-left:auto}
+
+    /* v6: 모바일 표가 안 보이는 문제 방지(가로 스크롤 허용) */
+    .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .table-wrap table{min-width:520px}
+    @media (max-width: 420px){
+      .table-wrap table{min-width:420px}
+    }
   </style>
 </head>
 
@@ -106,6 +113,10 @@
       <h3>🧭 선택</h3>
 
       <div class="row">
+        <div style="flex:1 1 220px">
+          <div class="muted">학년도 선택</div>
+          <select id="yearSelect"></select>
+        </div>
         <div style="flex:2 1 360px">
           <div class="muted">종류 선택</div>
           <select id="typeSelect"></select>
@@ -161,7 +172,7 @@
 
       <div class="muted">
         * 영어/한국사는 백분위 없음(자동 등급).<br/>
-        * 회차 삭제는 (종류/과목/회차) 관련 점수·통계·단원 데이터까지 같이 삭제됩니다.
+        * 회차 삭제는 (학년도/종류/과목/회차) 관련 점수·통계·단원 데이터까지 같이 삭제됩니다.
       </div>
     </div>
 
@@ -170,7 +181,7 @@
       <h3>📈 그래프</h3>
       <div class="grid4">
         <div class="card">
-          <div class="t">그래프 1) 선택한 종류 · 과목의 회차별 추이</div>
+          <div class="t">그래프 1) 선택한 학년도 · 종류 · 과목의 회차별 추이</div>
           <div class="d mini">X=회차, Y=점수(0~100)</div>
           <canvas id="chart1"></canvas>
         </div>
@@ -217,10 +228,12 @@
 
       <div class="section" style="background:#fff;margin-top:12px">
         <h3 style="margin:0 0 8px">단원별 점수</h3>
-        <table>
-          <thead><tr><th>단원</th><th>점수</th><th>만점</th></tr></thead>
-          <tbody id="unitTable"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>단원</th><th>점수</th><th>만점</th></tr></thead>
+            <tbody id="unitTable"></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section" style="background:#fff;margin-top:12px">
@@ -270,7 +283,7 @@
 
       <div class="section" style="background:#fff">
         <h3 style="margin:0 0 8px">📊 시험 통계 입력(평균/등급컷)</h3>
-        <div class="muted">현재 선택(종류/과목/회차)에 대해 평균/등급컷 저장</div>
+        <div class="muted">현재 선택(학년도/종류/과목/회차)에 대해 평균/등급컷 저장</div>
         <div class="row">
           <input id="statAvg" type="number" placeholder="평균(예: 78)" />
           <input id="cut1" type="number" placeholder="1등급컷(선택)" />
@@ -292,7 +305,7 @@
 
       <div class="section" style="background:#fff">
         <h3 style="margin:0 0 8px">🧩 단원 점수 입력(그래프4)</h3>
-        <div class="muted">현재 선택(종류/과목/회차)에 단원 점수 추가</div>
+        <div class="muted">현재 선택(학년도/종류/과목/회차)에 단원 점수 추가</div>
         <div class="row">
           <input id="unitName" placeholder="단원명(예: 문학/비문학, 미적분-수열)" />
           <input id="unitScore" type="number" placeholder="점수" />
@@ -303,7 +316,7 @@
 
       <div class="section" style="background:#fff">
         <h3 style="margin:0 0 8px">🎓 대학 데이터(서울대 지균 v1)</h3>
-        <div class="muted">* v5에서는 “서울대(지균)” 5개만 사용(수의예과 없음)</div>
+        <div class="muted">* v6에서는 “서울대(지균)” 5개만 사용()</div>
         <div id="univAdminList" class="muted" style="margin-top:8px"></div>
       </div>
     </div>
@@ -311,13 +324,13 @@
     <!-- 맨 아래: 계산식/업데이트 -->
     <div class="footer">
       <div class="footer-row">
-        <small id="verLine">v5</small>
+        <small id="verLine">v6</small>
         <div class="row" style="margin:0;gap:8px;justify-content:flex-end">
           <button id="openChangelogBtn" class="mini-btn" type="button">업데이트 내역 보기</button>
         </div>
       </div>
 
-      <div style="margin-top:12px">
+      <div id="calcWrap" style="margin-top:12px; display:none">
         <details id="calcFinal">
           <summary>📐 점수 계산 방식 (최종버전) ▼</summary>
           <div class="hr"></div>
@@ -333,27 +346,33 @@
             <div class="hr"></div>
 
             <div class="t">영어 감점표(확정)</div>
-            <table>
-              <thead><tr><th>등급</th><th>감점</th></tr></thead>
-              <tbody id="engPenaltyTable"></tbody>
-            </table>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>등급</th><th>감점</th></tr></thead>
+                <tbody id="engPenaltyTable"></tbody>
+              </table>
+            </div>
 
             <div class="hr"></div>
 
             <div class="t">한국사 감점표(확정)</div>
-            <table>
-              <thead><tr><th>등급</th><th>감점</th></tr></thead>
-              <tbody id="hisPenaltyTable"></tbody>
-            </table>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>등급</th><th>감점</th></tr></thead>
+                <tbody id="hisPenaltyTable"></tbody>
+              </table>
+            </div>
 
             <div class="hr"></div>
 
             <div class="t">서울대(지균) 학과 컷(대학점수)</div>
             <div class="muted">* 의예과 컷은 99.5로 고정, 나머지는 제공 표 비율로 계산</div>
-            <table>
-              <thead><tr><th>계열</th><th>학교</th><th>학과</th><th>컷(대학점수)</th></tr></thead>
-              <tbody id="snuCutsTable"></tbody>
-            </table>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>계열</th><th>학교</th><th>학과</th><th>컷(대학점수)</th></tr></thead>
+                <tbody id="snuCutsTable"></tbody>
+              </table>
+            </div>
           </div>
         </details>
 
@@ -380,7 +399,6 @@
     getFirestore, doc, getDoc, setDoc, onSnapshot
   } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-  // ✅ 너가 준 Firebase 설정 그대로
   const firebaseConfig = {
     apiKey: "AIzaSyCuMFRksmpH0TuNqv3YoMa76DAAN4r3B84",
     authDomain: "scoreboard-d4bf9.firebaseapp.com",
@@ -391,14 +409,14 @@
     measurementId: "G-VC1922P5SV"
   };
 
-  const APP_VERSION = 5;          // 공지/표시용 앱 버전
-  const DATA_SCHEMA_VERSION = 5;  // 데이터 구조 버전(마이그레이션용)
+  const APP_VERSION = 6;          // 공지/표시용 앱 버전          // 공지/표시용 앱 버전
+  const DATA_SCHEMA_VERSION = 6;  // 데이터 구조 버전(마이그레이션용)  // 데이터 구조 버전(마이그레이션용)
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
   // ✅ 중요: 문서 경로 “버전 상관없이 고정” (v5부터 데이터 안 날아가게)
-  const STATE_DOC_PATH = ["public", "state"]; // collection, docId (절대 버전별로 바꾸지 말기)
+  const STATE_DOC_PATH = ["public", "state"];
 
   /* ============================
    *  기본 유틸/상수
@@ -408,28 +426,18 @@
   const show = (el, yes)=> el.classList.toggle("hidden", !yes);
   const uid = ()=> Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-  // 과목 6개 고정
   const SUBJECTS = ["국어","수학","영어","화학1","생명과학1","한국사"];
-
-  // 등급 이모지
   const ROLE_EMOJI = { "의":"👑", "치":"🦷", "한":"🌿", "약":"💊", "수":"📐" };
 
-  // 권한: 의만 write
   const isAdmin = (u)=> u?.grade === "의";
-
-  // 공지/표시용 권한 단계(의만, 의치, 의치한, 의치한약, 모두)
   const roleOrder = ["수","약","한","치","의"]; // 낮→높
-  const roleGE = (userGrade, minGrade)=>{
-    return roleOrder.indexOf(userGrade) >= roleOrder.indexOf(minGrade);
-  };
+  const roleGE = (userGrade, minGrade)=> roleOrder.indexOf(userGrade) >= roleOrder.indexOf(minGrade);
 
-  // 영어/한국사 점수 범위
   const SCORE_MAX = (subject)=>{
     if(subject==="화학1"||subject==="생명과학1"||subject==="한국사") return 50;
     return 100;
   };
 
-  // 영어/한국사 등급 자동(확정)
   function scoreToEnglishGrade(score){
     if(score>=90) return 1;
     if(score>=80) return 2;
@@ -442,7 +450,6 @@
     return 9;
   }
   function scoreToHistoryGrade(score){
-    // 확정: 1등급 50~40
     if(score>=40) return 1;
     if(score>=35) return 2;
     if(score>=30) return 3;
@@ -454,19 +461,15 @@
     return 9;
   }
 
-  // 감점표(확정)
-  const ENG_PENALTY = {1:0,2:1,3:2,4:4,5:6,6:8,7:10,8:12,9:14};
-  const HIS_PENALTY = {1:0,2:0,3:1,4:2,5:4,6:6,7:8,8:10,9:12};
+  const ENG_PENALTY = {1:0,2:0,3:0,4:0.5,5:1.0,6:1.5,7:2.0,8:2.5,9:3.0};
 
-  // 백분위 경계(고정)
+// 한국사 감점표 v1 (기존)
+const HIS_PENALTY_V1 = {1:0,2:0,3:0.5,4:1.0,5:1.5,6:2.0,7:2.5,8:3.0,9:3.5};
+
+// 한국사 감점표 v2 (v6: 서울대학교(지균) 계산방식 v2)
+const HIS_PENALTY_V2 = {1:0,2:0,3:0,4:0.4,5:0.8,6:1.2,7:1.6,8:2.0,9:2.4};
   const PCT_FLOOR = {1:96,2:89,3:77,4:60,5:40,6:23,7:11,8:4,9:0};
 
-  /* ============================
-   *  서울대(지균) 컷(대학점수) 확정
-   *  - 의예과 컷 = 99.5 고정
-   *  - 나머지 4개는 제공 표(변환점수) 비율로 계산
-   *  - 수의예과 삭제 반영
-   * ============================ */
   const SNU_BASE = {
     baseConv: 434.1,
     anchorCut: 99.5,
@@ -478,7 +481,6 @@
       { track:"의예과",   school:"서울대학교(지균)", major:"의예과",   conv:434.1 }
     ]
   };
-
   function buildSnuCuts(){
     return SNU_BASE.rows.map(r=>{
       const ratio = r.conv / SNU_BASE.baseConv;
@@ -494,34 +496,80 @@
    * ============================ */
   function defaultState(){
     return {
-      schemaVersion: DATA_SCHEMA_VERSION,  // ✅ 데이터 구조 버전
-      users: [], // {id,name,grade,pwHash,createdAt}
-      logs: [],  // {time,name,grade}
-      types: [], // {id,name,createdAt}
-      rounds: [], // {id,typeId,subject,round,createdAt}
-      scores: [], // {id,typeId,subject,round,score,percentile,grade,updatedAt}
-      stats: [],  // {id,typeId,subject,round,avg,cut1..cut9,updatedAt}
-      units: [],  // {id,typeId,subject,round,unit,score,maxScore,updatedAt}
-      goal: null, // {school, major, updatedAt}
-      seen: {},   // { [userId]: { seenVersion: number } }
-      univ: {
-        snuJigyun: buildSnuCuts()
-      },
+      schemaVersion: DATA_SCHEMA_VERSION,
+      years: ["2025", "2026"],      // v6: 학년도 탭 복구
+      currentYear: "2026",
+      users: [],
+      logs: [],
+      types: [],
+      rounds: [], // {id,year,typeId,subject,round,createdAt}
+      scores: [], // {id,year,typeId,subject,round,score,percentile,grade,updatedAt}
+      stats: [],  // {id,year,typeId,subject,round,avg,cut1..cut9,updatedAt}
+      units: [],  // {id,year,typeId,subject,round,unit,score,maxScore,updatedAt}
+      goal: null,
+      seen: {},
+      univ: { snuJigyun: buildSnuCuts() },
       updatedAt: null
     };
   }
 
   let state = defaultState();
-  let currentUser = null; // {id,name,grade}
+  let currentUser = null;
+
+  let selectedYear = "2026";
   let selectedTypeId = null;
   let selectedSubject = SUBJECTS[0];
+
+
+// 서울대학교(일반) 데이터 (35개 학과) - 제공된 백분위에 +0.5 적용 (소수점 둘째자리)
+const SNU_GENERAL_BASE = [
+  // 자연계열
+  {track:"자연계열", school:"서울대학교(일반)", major:"수리과학부", cut:99.00},
+  {track:"자연계열", school:"서울대학교(일반)", major:"통계학과", cut:96.00},
+  {track:"자연계열", school:"서울대학교(일반)", major:"물리학전공", cut:95.75},
+  {track:"자연계열", school:"서울대학교(일반)", major:"천문학전공", cut:97.00},
+  {track:"자연계열", school:"서울대학교(일반)", major:"화학부", cut:98.75},
+  {track:"자연계열", school:"서울대학교(일반)", major:"생명과학부", cut:98.25},
+  {track:"자연계열", school:"서울대학교(일반)", major:"지구환경과학부", cut:97.00},
+  {track:"자연계열", school:"서울대학교(일반)", major:"식물생산과학부", cut:95.75},
+  {track:"자연계열", school:"서울대학교(일반)", major:"산림과학부", cut:97.75},
+  {track:"자연계열", school:"서울대학교(일반)", major:"응용생물화학부", cut:97.00},
+  {track:"자연계열", school:"서울대학교(일반)", major:"바이오시스템·소재학부", cut:98.75},
+  {track:"자연계열", school:"서울대학교(일반)", major:"스마트시스템과학과", cut:null},
+  {track:"자연계열", school:"서울대학교(일반)", major:"식품영양학과", cut:97.75},
+  {track:"자연계열", school:"서울대학교(일반)", major:"의류학과", cut:null},
+  {track:"자연계열", school:"서울대학교(일반)", major:"첨단융합학부", cut:98.50},
+
+  // 공학계열
+  {track:"공학계열", school:"서울대학교(일반)", major:"건설환경도시공학부", cut:98.75},
+  {track:"공학계열", school:"서울대학교(일반)", major:"기계공학부", cut:96.75},
+  {track:"공학계열", school:"서울대학교(일반)", major:"재료공학부", cut:97.75},
+  {track:"공학계열", school:"서울대학교(일반)", major:"전기·정보공학부", cut:97.75},
+  {track:"공학계열", school:"서울대학교(일반)", major:"컴퓨터공학부", cut:97.75},
+  {track:"공학계열", school:"서울대학교(일반)", major:"화학생물공학부", cut:98.75},
+  {track:"공학계열", school:"서울대학교(일반)", major:"건축학과", cut:92.25},
+  {track:"공학계열", school:"서울대학교(일반)", major:"산업공학과", cut:96.50},
+  {track:"공학계열", school:"서울대학교(일반)", major:"에너지자원공학과", cut:96.00},
+  {track:"공학계열", school:"서울대학교(일반)", major:"원자핵공학과", cut:96.00},
+  {track:"공학계열", school:"서울대학교(일반)", major:"조선해양공학과", cut:97.00},
+  {track:"공학계열", school:"서울대학교(일반)", major:"항공우주공학과", cut:95.25},
+  {track:"공학계열", school:"서울대학교(일반)", major:"식품·동물생명공학부", cut:96.50},
+  {track:"공학계열", school:"서울대학교(일반)", major:"조경·지역시스템공학부", cut:98.25},
+  // 자유전공(광역은 공학계열로 넣기)
+  {track:"공학계열", school:"서울대학교(일반)", major:"광역", cut:97.25},
+  {track:"자유전공", school:"서울대학교(일반)", major:"자유전공학부", cut:97.75},
+
+  // 의치약수
+  {track:"수의예과", school:"서울대학교(일반)", major:"수의예과", cut:98.50},
+  {track:"약학과", school:"서울대학교(일반)", major:"약학계열", cut:99.00},
+  {track:"치의학과", school:"서울대학교(일반)", major:"치의학과", cut:98.75},
+  {track:"의예과", school:"서울대학교(일반)", major:"의예과", cut:99.50},
+];
+
   let selectedRound = null;
 
   let c1=null,c2=null,c3=null,c4=null;
 
-  /* ============================
-   *  해시
-   * ============================ */
   async function sha256(text){
     const enc = new TextEncoder().encode(text);
     const buf = await crypto.subtle.digest("SHA-256", enc);
@@ -529,10 +577,36 @@
     return arr.map(b=>b.toString(16).padStart(2,"0")).join("");
   }
 
-  /* ============================
-   *  Firestore load/save
-   * ============================ */
   const stateRef = doc(db, ...STATE_DOC_PATH);
+
+  
+  function migrateToV6(){
+    // v6 마이그레이션 규칙
+    // - 사용자/비밀번호/종류/대학데이터 등은 유지
+    // - 점수 관련 데이터(회차/점수/통계/단원)만 초기화 (v6에서 1회)
+    // - 학년도 시스템: 2026 / 2027 (2026은 의/치/한만, 2027은 전 등급)
+    const sv = Number(state.schemaVersion ?? 0);
+
+    // years/currentYear 보정(항상)
+    state.years = ["2026","2027"];
+    if(!state.currentYear) state.currentYear = "2027";
+
+    if(sv >= 6) return;
+
+    // ✅ v6: 점수 데이터만 초기화
+    state.rounds = [];
+    state.scores = [];
+    state.stats  = [];
+    state.units  = [];
+
+    // 선택 상태/기타 보정
+    if(!Array.isArray(state.types)) state.types = [];
+    if(!Array.isArray(state.users)) state.users = [];
+    if(!Array.isArray(state.logs)) state.logs = [];
+    if(!state.seen) state.seen = {};
+
+    state.schemaVersion = 6;
+  }
 
   async function loadStateFromServer(){
     const snap = await getDoc(stateRef);
@@ -544,13 +618,17 @@
     const data = snap.data();
     state = { ...defaultState(), ...data };
 
-    // 최소 보정
     if(!state.univ?.snuJigyun) state.univ = { snuJigyun: buildSnuCuts() };
     if(!Array.isArray(state.univ.snuJigyun)) state.univ.snuJigyun = buildSnuCuts();
     if(!state.seen) state.seen = {};
     if(!Number.isFinite(Number(state.schemaVersion))) state.schemaVersion = DATA_SCHEMA_VERSION;
 
-    // (나중에 v6, v7에서 schemaVersion 보고 마이그레이션 처리)
+    if(Number(state.schemaVersion) < 6){
+      migrateToV6();
+      await saveStateToServer(true);
+    }
+
+    selectedYear = state.currentYear || "2026";
   }
 
   async function saveStateToServer(force=false){
@@ -566,6 +644,15 @@
       state = { ...defaultState(), ...incoming };
       if(!state.univ?.snuJigyun) state.univ = { snuJigyun: buildSnuCuts() };
 
+      if(Number(state.schemaVersion) < 6){
+        migrateToV6();
+        saveStateToServer(true);
+      }
+
+      // year 보정(클라이언트 선택 유지)
+      if(!state.currentYear) state.currentYear = "2026";
+      if(!selectedYear) selectedYear = state.currentYear;
+
       if(currentUser){
         refreshAll();
       }else{
@@ -574,9 +661,6 @@
     });
   }
 
-  /* ============================
-   *  UI 초기화/부팅
-   * ============================ */
   function boot(){
     const hasUsers = state.users.length > 0;
     show($("setupSection"), !hasUsers);
@@ -586,6 +670,7 @@
     show($("scoreEditorSection"), false);
     show($("chartsSection"), false);
     show($("detailSection"), false);
+  show($("calcWrap"), false);
     show($("goalSection"), false);
 
     show($("manageTab"), false);
@@ -613,6 +698,7 @@
   }
 
   function refreshAll(){
+    renderYearSelect();
     renderSubjectButtons();
     renderTypeSelect();
     renderRoundButtons();
@@ -635,6 +721,9 @@
     show($("pickSection"), true);
     show($("chartsSection"), true);
     show($("detailSection"), true);
+
+  // 로그인 후에만 점수 계산 방식/역대 계산 방식 표시
+  show($("calcWrap"), true);
     show($("logoutBtn"), true);
 
     show($("roleBadge"), true);
@@ -647,15 +736,13 @@
     show($("goalSection"), roleGE(currentUser.grade, "치"));
     show($("manageSection"), false);
 
+    if(!selectedYear) selectedYear = state.currentYear || "2026";
     if(!selectedTypeId && state.types.length>0) selectedTypeId = state.types[0].id;
     selectedSubject = selectedSubject || SUBJECTS[0];
 
     refreshAll();
   }
 
-  /* ============================
-   *  로그인/로그아웃/기록
-   * ============================ */
   function addLog(name, grade){
     state.logs.push({ time: new Date().toLocaleString(), name, grade });
     saveStateToServer(false);
@@ -684,7 +771,6 @@
     afterLogin();
   });
 
-  /* 최초 관리자 생성 */
   $("setupBtn").addEventListener("click", async ()=>{
     const name = $("setupName").value.trim();
     const pw = $("setupPw").value.trim();
@@ -705,41 +791,132 @@
   /* ============================
    *  공지(업데이트) 시스템
    * ============================ */
-  const CHANGELOG = {
+    const CHANGELOG = {
     5: [
-      { minRole:"수", title:"v5부터 데이터 초기화 방지", bullets:[
-        "Firestore 문서 경로를 public/state로 고정(버전업해도 데이터 유지)",
-        "앱 버전(APP_VERSION)과 데이터 버전(schemaVersion) 분리"
-      ]},
-      { minRole:"수", title:"업데이트 공지 시스템", bullets:[
-        "로그인 직후 계정별(비밀번호/ID별) 버전당 1회만 공지 표시",
-        "닫기 누르면 자동 재표시 없음",
-        "하단에서 버전별(v5, v6...) 업데이트 내역 다시 보기"
-      ]},
-      { minRole:"치", title:"목표 대학·학과(의 설정 / 치 열람)", bullets:[
-        "목표는 전체 공통 1개(학년도 구분 없음)",
-        "의만 설정/수정/삭제, 치는 보기만 가능",
-        "한/약/수는 목표 영역 숨김"
-      ]},
-      { minRole:"수", title:"영어/한국사", bullets:[
-        "백분위 완전 삭제",
-        "점수 입력 시 등급 자동 계산",
-        "입력 범위 제한(영어 0~100 / 한국사 0~50)"
-      ]},
-      { minRole:"수", title:"그래프3 대학 비교(7막대)", bullets:[
-        "Y축은 점수(모의고사 점수)만 사용",
-        "내 막대 1 + 아래3 + 위3 = 총 7개 고정",
-        "우상향 정렬"
-      ]},
-      { minRole:"수", title:"대학교 관련 데이터 업데이트", bullets:[
-        "서울대학교(지균) 데이터 반영(5개 학과)",
-        "의예과 컷=99.5 고정, 나머지는 제공 표 비율로 계산",
-        "대학추천 분류: 적정/소신/안정/상향"
-      ]},
-      { minRole:"수", title:"백분위 관련 알림", bullets:[
-        "컷 부족 시 분석/계산 제한 안내",
-        "영어/한국사는 백분위 미사용 안내"
-      ]}
+      {
+        title: "v5부터 데이터 초기화 방지",
+        minRole: "수",
+        items: [
+          "Firestore 문서 경로를 public/state로 고정(버전업해도 데이터 유지)",
+          "앱 버전(APP_VERSION)과 데이터 버전(schemaVersion) 분리"
+        ]
+      },
+      {
+        title: "업데이트 공지 시스템",
+        minRole: "수",
+        items: [
+          "로그인 직후 계정별(비밀번호/ID별) 버전당 1회만 공지 표시",
+          "닫기 누르면 자동 재표시 없음",
+          "하단에서 버전별(v5, v6...) 업데이트 내역 다시 보기"
+        ]
+      },
+      {
+        title: "목표 대학·학과(의 설정 / 치 열람)",
+        minRole: "수",
+        items: [
+          "목표는 전체 공통 1개(학년도 구분 없음)",
+          "의만 설정/수정/삭제, 치는 보기만 가능",
+          "한/약/수는 목표 영역 숨김"
+        ]
+      },
+      {
+        title: "영어/한국사",
+        minRole: "수",
+        items: [
+          "백분위 완전 삭제",
+          "점수 입력 시 등급 자동 계산",
+          "입력 범위 제한(영어 0~100 / 한국사 0~50)"
+        ]
+      },
+      {
+        title: "그래프3 대학 비교(7막대)",
+        minRole: "수",
+        items: [
+          "Y축은 점수(모의고사 점수)만 사용",
+          "내 막대 1 + 아래3 + 위3 = 총 7개 고정",
+          "우상향 정렬"
+        ]
+      },
+      {
+        title: "대학교 관련 데이터 업데이트",
+        minRole: "수",
+        items: [
+          "서울대학교(지균) 대학점수 계산방식 v1 추가",
+          "의예과 컷=99.5 고정, 나머지는 제공 표 비율로 계산",
+          "대학추천 분류: 적정/소신/안정/상향"
+        ]
+      },
+      {
+        title: "백분위 관련 알림",
+        minRole: "수",
+        items: [
+          "컷 부족 시 분석/계산 제한 안내",
+          "영어/한국사는 백분위 미사용 안내"
+        ]
+      }
+    ],
+    6: [
+      {
+        title: "학년도 시스템 정식 도입",
+        minRole: "수",
+        items: [
+          "학년도는 2026학년도 / 2027학년도 2개",
+          "2026학년도: 의/치/한만 접근 가능",
+          "2027학년도: 전 등급 접근 가능"
+        ]
+      },
+      {
+        title: "점수 데이터 초기화",
+        minRole: "수",
+        items: [
+          "v6 최초 적용 시 점수/회차/통계/단원 데이터만 초기화",
+          "계정(비밀번호/이름/등급) 및 설정 데이터는 유지"
+        ]
+      },
+      {
+        title: "그래프 구조 개편",
+        minRole: "수",
+        items: [
+          "그래프2: 선택한 종류는 선택 회차(또는 전체회차=평균)로 표시",
+          "그래프2: 다른 종류는 같은 과목의 평균으로 표시(과목끼리 비교 금지 유지)",
+          "그래프2: 다른 학년도 비교 시 ‘2026학년도 ○○’ 처럼 학년도만 표시",
+          "그래프2: 데이터가 없는 종류/학년도는 자동 제외"
+        ]
+      },
+      {
+        title: "전체회차 자동 생성",
+        minRole: "약",
+        items: [
+          "회차를 1개 이상 만들면 전체회차가 자동 생성",
+          "전체회차 기준 분석은 평균 기반",
+          "전체회차 접근 권한: 약/한/치/의"
+        ]
+      },
+      {
+        title: "대학 계산 안정성 강화",
+        minRole: "치",
+        items: [
+          "대학 계산에서 선택 학년도 기준으로만 평균/대체 점수 계산",
+          "그래프3: 내 점수 기준 아래3 + 위3(총 7칸) 고정, 데이터 부족 시 빈칸 유지",
+          "서울대학교(지균) 한국사 감점 규칙(v2) 반영"
+        ]
+      },
+      {
+        title: "대학교 관련 데이터 업데이트",
+        minRole: "치",
+        items: [
+          "서울대학교(일반) 데이터 반영(35개 학과)",
+          "한 버전에 한 학교만 추가(추가 학교 데이터는 이후 버전에서 확장)"
+        ]
+      },
+      {
+        title: "모바일 UI 안정화",
+        minRole: "수",
+        items: [
+          "영어/한국사 등급표가 모바일에서도 보이도록 스크롤/레이아웃 개선",
+          "로그인 후에만 ‘점수 계산 방식 / 역대 점수 계산 방식’ 표시"
+        ]
+      }
     ]
   };
 
@@ -759,18 +936,16 @@
     const items = CHANGELOG[version] || [];
     const filtered = items.filter(it => roleGE(forUserGrade, it.minRole));
     if(filtered.length===0) return "<div class='muted'>표시할 업데이트 내역이 없습니다.</div>";
-    return filtered.map(it=>{
-      return `
-        <div class="card" style="margin-top:10px">
-          <div class="t">${escapeHtml(it.title)}</div>
-          <div class="d">
-            <ul style="margin:8px 0 0 18px">
-              ${it.bullets.map(b=>`<li>${escapeHtml(b)}</li>`).join("")}
-            </ul>
-          </div>
+    return filtered.map(it=>`
+      <div class="card" style="margin-top:10px">
+        <div class="t">${escapeHtml(it.title)}</div>
+        <div class="d">
+          <ul style="margin:8px 0 0 18px">
+            ${it.bullets.map(b=>`<li>${escapeHtml(b)}</li>`).join("")}
+          </ul>
         </div>
-      `;
-    }).join("");
+      </div>
+    `).join("");
   }
 
   function openModal(html){
@@ -843,45 +1018,38 @@
   });
 
   /* ============================
-   *  선택 UI: 종류/과목/회차
+   *  선택 UI: 학년도/종류/과목/회차
    * ============================ */
-  function renderTypeSelect(){
-    const sel = $("typeSelect");
-    sel.innerHTML = "";
-    if(state.types.length===0){
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "종류 없음(의가 관리에서 추가)";
-      sel.appendChild(opt);
-      sel.disabled = true;
-      selectedTypeId = null;
-      return;
-    }
-    sel.disabled = false;
-    state.types.forEach(t=>{
-      const opt = document.createElement("option");
-      opt.value = t.id;
-      opt.textContent = t.name;
-      sel.appendChild(opt);
-    });
-    if(!selectedTypeId || !state.types.some(t=>t.id===selectedTypeId)){
-      selectedTypeId = state.types[0].id;
-    }
-    sel.value = selectedTypeId;
+  
+  function canAccessYear(grade, year){
+    if(String(year)==="2026") return ["의","치","한"].includes(grade);
+    if(String(year)==="2027") return true;
+    return false;
   }
 
-  $("typeSelect").addEventListener("change", ()=>{
-    selectedTypeId = $("typeSelect").value;
-    selectedRound = null;
-    renderRoundButtons();
-    updatePickLabel();
-    updateDetail();
-    renderAllCharts();
-    renderUniversityGroups();
-    renderPctAlert();
-  });
+  function getAllowedYears(){
+    const years = Array.isArray(state.years) ? state.years : ["2026","2027"];
+    if(!currentUser) return years.filter(y=>String(y)==="2027"); // 로그인 전엔 최소만
+    return years.filter(y=>canAccessYear(currentUser.grade, y));
+  }
 
-  function renderSubjectButtons(){
+  function renderYearSelect(){
+    const sel = $("yearSelect");
+    sel.innerHTML = "";
+    const years = getAllowedYears();
+    years.forEach(y=>{
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = `${y}학년도`;
+      sel.appendChild(opt);
+    });
+    if(!selectedYear || !years.includes(String(selectedYear))){
+      selectedYear = (state.currentYear && years.includes(String(state.currentYear))) ? String(state.currentYear) : String(years[years.length-1] || "2027");
+    }
+    sel.value = String(selectedYear);
+  }
+
+function renderSubjectButtons(){
     const wrap = $("subjectButtons");
     wrap.innerHTML = "";
     SUBJECTS.forEach(subj=>{
@@ -917,17 +1085,19 @@
 
   function roundsInScope(){
     if(!selectedTypeId) return [];
-    return state.rounds
-      .filter(r=>r.typeId===selectedTypeId && r.subject===selectedSubject)
-      .map(r=>Number(r.round))
-      .filter(n=>Number.isFinite(n))
-      .sort((a,b)=>a-b);
+    const a = state.rounds
+      .filter(r=>String(r.year)===String(selectedYear) && r.typeId===selectedTypeId && r.subject===selectedSubject)
+      .map(r=>Number(r.round));
+    const b = state.scores
+      .filter(s=>String(s.year)===String(selectedYear) && s.typeId===selectedTypeId && s.subject===selectedSubject)
+      .map(s=>Number(s.round));
+    return [...new Set([...a,...b])].filter(Number.isFinite).sort((x,y)=>x-y);
   }
 
-  function ensureRoundExists(typeId, subject, round){
-    const exists = state.rounds.some(r=>r.typeId===typeId && r.subject===subject && Number(r.round)===Number(round));
+  function ensureRoundExists(year, typeId, subject, round){
+    const exists = state.rounds.some(r=>String(r.year)===String(year) && r.typeId===typeId && r.subject===subject && Number(r.round)===Number(round));
     if(exists) return;
-    state.rounds.push({ id: uid(), typeId, subject, round:Number(round), createdAt: Date.now() });
+    state.rounds.push({ id: uid(), year:String(year), typeId, subject, round:Number(round), createdAt: Date.now() });
   }
 
   function renderRoundButtons(){
@@ -968,30 +1138,33 @@
   function updatePickLabel(){
     const typeName = state.types.find(t=>t.id===selectedTypeId)?.name ?? "-";
     const rnd = (selectedRound==null) ? "-" : `${selectedRound}회`;
-    $("currentPick").textContent = `${typeName} / ${selectedSubject} / ${rnd}`;
+    $("currentPick").textContent = `${selectedYear} / ${typeName} / ${selectedSubject} / ${rnd}`;
   }
 
   /* ============================
    *  데이터 조회 헬퍼
    * ============================ */
-  function getMyScoreDoc(){
-    if(!selectedTypeId || selectedRound==null) return null;
+  function getScoreDoc(year, typeId, subject, round){
+    if(!typeId || round==null) return null;
     return state.scores.find(s =>
-      s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)
+      String(s.year)===String(year) &&
+      s.typeId===typeId && s.subject===subject && Number(s.round)===Number(round)
     ) ?? null;
   }
-
+  function getMyScoreDoc(){
+    return getScoreDoc(selectedYear, selectedTypeId, selectedSubject, selectedRound);
+  }
   function getStatDoc(){
     if(!selectedTypeId || selectedRound==null) return null;
     return state.stats.find(s =>
+      String(s.year)===String(selectedYear) &&
       s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)
     ) ?? null;
   }
-
   function getUnitDocs(){
     if(!selectedTypeId || selectedRound==null) return [];
     return state.units
-      .filter(u => u.typeId===selectedTypeId && u.subject===selectedSubject && Number(u.round)===Number(selectedRound))
+      .filter(u => String(u.year)===String(selectedYear) && u.typeId===selectedTypeId && u.subject===selectedSubject && Number(u.round)===Number(selectedRound))
       .slice()
       .sort((a,b)=>(a.unit||"").localeCompare(b.unit||"", "ko"));
   }
@@ -1007,15 +1180,11 @@
   }
 
   function getCurrentPercentile(subject){
-    if(!selectedTypeId || selectedRound==null) return null;
-    const doc = state.scores.find(s=>s.typeId===selectedTypeId && s.subject===subject && Number(s.round)===Number(selectedRound));
+    const doc = getScoreDoc(selectedYear, selectedTypeId, subject, selectedRound);
     const v = Number(doc?.percentile);
     return Number.isFinite(v) ? v : null;
   }
 
-  /* ============================
-   *  백분위 추정(컷 2개 이상 필요)
-   * ============================ */
   function estimatePercentileFromCuts(subject, score, statDoc){
     if(!statDoc) return { ok:false, reason:"등급컷 없음" };
     const cuts = [];
@@ -1063,10 +1232,7 @@
     return Math.max(0, Math.min(100, Math.round(v*100)/100));
   }
 
-  /* ============================
-   *  대학점수(서울대 지균 v1)
-   * ============================ */
-  function calcCollegeScoreSnuJigyunV1(inputs){
+  function calcCollegeScoreSnu(inputs, selectedUnivSchool){
     const { korPct, mathPct, chemPct, bioPct, engGrade, hisGrade } = inputs;
 
     if([korPct, mathPct, chemPct, bioPct].some(v=>!Number.isFinite(Number(v)))) return { ok:false, reason:"필수 백분위 부족" };
@@ -1076,16 +1242,13 @@
 
     const raw = 0.35*Number(mathPct) + 0.30*Number(korPct) + 0.25*탐구평균
       - (ENG_PENALTY[Number(engGrade)] ?? 0)
-      - (HIS_PENALTY[Number(hisGrade)] ?? 0);
+      - (HIS_PENALTY_V1[Number(hisGrade)] ?? 0);
 
     const uni = (raw / 0.90) * 100;
     const uni2 = Math.round(uni*100)/100;
     return { ok:true, collegeScore: Math.max(0, Math.min(100, uni2)), raw: Math.round(raw*100)/100 };
   }
 
-  /* ============================
-   *  대학추천 분류 규칙(확정)
-   * ============================ */
   function classify(diff){
     if(!Number.isFinite(diff)) return "계산불가";
     if(Math.abs(diff) <= 1.0) return "적정";
@@ -1116,7 +1279,7 @@
     const max = SCORE_MAX(selectedSubject);
     if(score < 0 || score > max) return alert(`${selectedSubject} 점수는 0~${max} 범위야.`);
 
-    ensureRoundExists(selectedTypeId, selectedSubject, round);
+    ensureRoundExists(selectedYear, selectedTypeId, selectedSubject, round);
 
     let percentile = null;
     let grade = null;
@@ -1132,13 +1295,13 @@
         return alert("백분위는 0~100 범위 숫자야.");
       }
       if(percentile==null){
-        const st = state.stats.find(s=>s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===round) ?? null;
+        const st = state.stats.find(s=>String(s.year)===String(selectedYear) && s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===round) ?? null;
         const est = estimatePercentileFromCuts(selectedSubject, score, st);
         if(est.ok) percentile = est.pct;
       }
     }
 
-    const existing = state.scores.find(s=>s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===round);
+    const existing = state.scores.find(s=>String(s.year)===String(selectedYear) && s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===round);
     if(existing){
       existing.score = score;
       existing.percentile = percentile;
@@ -1147,6 +1310,7 @@
     }else{
       state.scores.push({
         id: uid(),
+        year: String(selectedYear),
         typeId: selectedTypeId,
         subject: selectedSubject,
         round,
@@ -1177,12 +1341,12 @@
     if(!selectedTypeId || selectedRound==null) return alert("종류/회차를 먼저 선택해줘.");
 
     const typeName = state.types.find(t=>t.id===selectedTypeId)?.name ?? "";
-    if(!confirm(`정말 삭제할까?\n${typeName} / ${selectedSubject} / ${selectedRound}회\n(점수·통계·단원 데이터 포함)`)) return;
+    if(!confirm(`정말 삭제할까?\n${selectedYear} / ${typeName} / ${selectedSubject} / ${selectedRound}회\n(점수·통계·단원 데이터 포함)`)) return;
 
-    state.rounds = state.rounds.filter(r=>!(r.typeId===selectedTypeId && r.subject===selectedSubject && Number(r.round)===Number(selectedRound)));
-    state.scores = state.scores.filter(s=>!(s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)));
-    state.stats  = state.stats .filter(s=>!(s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)));
-    state.units  = state.units .filter(u=>!(u.typeId===selectedTypeId && u.subject===selectedSubject && Number(u.round)===Number(selectedRound)));
+    state.rounds = state.rounds.filter(r=>!(String(r.year)===String(selectedYear) && r.typeId===selectedTypeId && r.subject===selectedSubject && Number(r.round)===Number(selectedRound)));
+    state.scores = state.scores.filter(s=>!(String(s.year)===String(selectedYear) && s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)));
+    state.stats  = state.stats .filter(s=>!(String(s.year)===String(selectedYear) && s.typeId===selectedTypeId && s.subject===selectedSubject && Number(s.round)===Number(selectedRound)));
+    state.units  = state.units .filter(u=>!(String(u.year)===String(selectedYear) && u.typeId===selectedTypeId && u.subject===selectedSubject && Number(u.round)===Number(selectedRound)));
 
     await saveStateToServer(false);
 
@@ -1196,9 +1360,6 @@
     renderPctAlert();
   });
 
-  /* ============================
-   *  통계 저장(의)
-   * ============================ */
   $("saveStatsBtn").addEventListener("click", async ()=>{
     if(!isAdmin(currentUser)) return;
     if(!selectedTypeId || selectedRound==null) return alert("종류/회차를 먼저 선택해줘.");
@@ -1209,6 +1370,7 @@
 
     const data = {
       id: uid(),
+      year: String(selectedYear),
       typeId: selectedTypeId,
       subject: selectedSubject,
       round: Number(selectedRound),
@@ -1221,7 +1383,7 @@
       if(data["cut"+i]!=null && !Number.isFinite(data["cut"+i])) data["cut"+i]=null;
     }
 
-    const existing = state.stats.find(s=>s.typeId===data.typeId && s.subject===data.subject && Number(s.round)===Number(data.round));
+    const existing = state.stats.find(s=>String(s.year)===String(selectedYear) && s.typeId===data.typeId && s.subject===data.subject && Number(s.round)===Number(data.round));
     if(existing){
       Object.assign(existing, data);
       existing.id = existing.id;
@@ -1230,7 +1392,7 @@
     }
 
     state.stats = state.stats.filter((s, idx, arr)=>{
-      const same = arr.findIndex(x=>x.typeId===s.typeId && x.subject===s.subject && Number(x.round)===Number(s.round));
+      const same = arr.findIndex(x=>String(x.year)===String(s.year) && x.typeId===s.typeId && x.subject===s.subject && Number(x.round)===Number(s.round));
       return same === idx;
     });
 
@@ -1241,9 +1403,6 @@
     renderPctAlert();
   });
 
-  /* ============================
-   *  단원 추가(의)
-   * ============================ */
   $("addUnitBtn").addEventListener("click", async ()=>{
     if(!isAdmin(currentUser)) return;
     if(!selectedTypeId || selectedRound==null) return alert("종류/회차를 먼저 선택해줘.");
@@ -1259,6 +1418,7 @@
     const maxScore = (maxRaw==="") ? null : Number(maxRaw);
     state.units.push({
       id: uid(),
+      year: String(selectedYear),
       typeId: selectedTypeId,
       subject: selectedSubject,
       round: Number(selectedRound),
@@ -1277,9 +1437,6 @@
     renderAllCharts();
   });
 
-  /* ============================
-   *  상세 표시
-   * ============================ */
   function updateDetail(){
     const my = getMyScoreDoc();
     $("myScoreLabel").textContent = my ? String(my.score) : "-";
@@ -1309,12 +1466,9 @@
     }
   }
 
-  /* ============================
-   *  그래프
-   * ============================ */
   function renderChart1(){
     const rows = state.scores
-      .filter(s => s.typeId===selectedTypeId && s.subject===selectedSubject)
+      .filter(s => String(s.year)===String(selectedYear) && s.typeId===selectedTypeId && s.subject===selectedSubject)
       .map(s => ({ r:Number(s.round), v:Number(s.score) }))
       .filter(x => Number.isFinite(x.r) && Number.isFinite(x.v))
       .sort((a,b)=>a.r-b.r);
@@ -1329,25 +1483,125 @@
     });
   }
 
-  function renderChart2(){
-    const labels = state.types.map(t=>t.name);
-    const values = state.types.map(t=>{
-      const nums = state.scores
-        .filter(s=>s.typeId===t.id && s.subject===selectedSubject)
-        .map(s=>Number(s.score))
-        .filter(v=>Number.isFinite(v));
-      if(nums.length===0) return null;
-      return nums.reduce((a,b)=>a+b,0)/nums.length;
+    function renderChart2(){
+    const box = $("chart2Box");
+    box.innerHTML = "";
+
+    if(!currentUser){ box.innerHTML = `<div class="muted">로그인 후 이용할 수 있어요.</div>`; return; }
+
+    const year = String(selectedYear);
+    const otherYear = (year==="2026") ? "2027" : "2026";
+
+    const subject = String(selectedSubject);
+    if(!subject){ box.innerHTML = `<div class="muted">과목을 선택해주세요.</div>`; return; }
+
+    // 선택 종류/회차
+    const selType = String(selectedType);
+    const selRound = String(selectedRound);
+
+    // 점수 가져오기
+    const getRoundScore = (y,t,sub,rn)=>{
+      const s = state.scores.find(x=>String(x.year)===String(y) && String(x.type)===String(t) && String(x.subject)===String(sub) && String(x.round)===String(rn));
+      return s ? Number(s.score) : null;
+    };
+    const getAvgScore = (y,t,sub)=>{
+      const arr = state.scores.filter(x=>String(x.year)===String(y) && String(x.type)===String(t) && String(x.subject)===String(sub)).map(x=>Number(x.score)).filter(v=>Number.isFinite(v));
+      if(!arr.length) return null;
+      return arr.reduce((a,b)=>a+b,0)/arr.length;
+    };
+
+    // 표시할 (year,type) 후보: 선택 학년도 + 다른 학년도
+    const candidates = [];
+    const pushIfHas = (y,t,isSelected)=>{
+      // 선택 종류는 선택 회차(전체회차면 평균), 나머지는 평균
+      let val = null;
+      if(isSelected){
+        val = (selRound==="전체회차") ? getAvgScore(y,t,subject) : getRoundScore(y,t,subject,selRound);
+      }else{
+        val = getAvgScore(y,t,subject);
+      }
+      if(val==null) return;
+      const prefix = (String(y)===year) ? "" : `${y}학년도 `;
+      candidates.push({y:String(y), t:String(t), label: prefix + t, value: val, isSelected});
+    };
+
+    // 선택 학년도
+    state.types.forEach(t=>{
+      const isSel = (t===selType);
+      pushIfHas(year, t, isSel);
+    });
+    // 다른 학년도(선택 종류는 제외 요청)
+    state.types.forEach(t=>{
+      if(t===selType) return;
+      pushIfHas(otherYear, t, false);
     });
 
-    c2 = new Chart($("chart2").getContext("2d"),{
-      type:"bar",
-      data:{labels,datasets:[{label:`${selectedSubject} 종류별 평균`,data:values}]},
-      options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}
+    if(!candidates.length){
+      box.innerHTML = `<div class="muted">표시할 데이터가 없어요.</div>`;
+      return;
+    }
+
+    // 선택 종류 막대를 가운데로
+    const selectedIdx = candidates.findIndex(x=>x.isSelected && x.y===year);
+    if(selectedIdx>=0){
+      const sel = candidates.splice(selectedIdx,1)[0];
+      const mid = Math.ceil(candidates.length/2); // 짝수면 오른쪽
+      candidates.splice(mid,0,sel);
+    }
+
+    // 막대 그래프 렌더(0~100)
+    const maxW = 520;
+    const rowWrap = document.createElement("div");
+    rowWrap.style.display = "grid";
+    rowWrap.style.gap = "10px";
+
+    candidates.forEach((c)=>{
+      const v = clamp(c.value,0,100);
+      const row = document.createElement("div");
+      row.style.display="grid";
+      row.style.gridTemplateColumns="140px 1fr 48px";
+      row.style.alignItems="center";
+      row.style.gap="10px";
+
+      const lab = document.createElement("div");
+      lab.className="muted";
+      lab.style.fontWeight = c.isSelected ? "700" : "500";
+      lab.textContent = c.label;
+
+      const barBox = document.createElement("div");
+      barBox.style.height="14px";
+      barBox.style.borderRadius="999px";
+      barBox.style.background="#eef2ff";
+      barBox.style.position="relative";
+      barBox.style.overflow="hidden";
+
+      const bar = document.createElement("div");
+      bar.style.height="100%";
+      bar.style.width = `${(v/100)*100}%`;
+      bar.style.background = c.isSelected ? "#4f46e5" : "#a5b4fc";
+
+      barBox.appendChild(bar);
+
+      const val = document.createElement("div");
+      val.style.textAlign="right";
+      val.style.fontVariantNumeric="tabular-nums";
+      val.textContent = fmt1(v);
+
+      row.appendChild(lab);
+      row.appendChild(barBox);
+      row.appendChild(val);
+      rowWrap.appendChild(row);
     });
+
+    box.appendChild(rowWrap);
+    const note = document.createElement("div");
+    note.className="muted";
+    note.style.marginTop="10px";
+    note.textContent = "선택한 종류는 선택 회차(또는 전체회차=평균), 나머지는 평균으로 표시돼요. (과목 비교는 같은 과목만)";
+    box.appendChild(note);
   }
 
-  function renderChart3(){
+function renderChart3(){
     const noteEl = $("chart3Note");
     noteEl.textContent = "";
 
@@ -1380,8 +1634,8 @@
         if(c!=null) pct = c;
       }
       if(pct==null){
-        const sdoc = state.scores.find(s=>s.typeId===selectedTypeId && s.subject===subj && Number(s.round)===Number(selectedRound));
-        const st = state.stats.find(x=>x.typeId===selectedTypeId && x.subject===subj && Number(x.round)===Number(selectedRound));
+        const sdoc = getScoreDoc(selectedYear, selectedTypeId, subj, selectedRound);
+        const st = state.stats.find(x=>String(x.year)===String(selectedYear) && x.typeId===selectedTypeId && x.subject===subj && Number(x.round)===Number(selectedRound));
         if(sdoc && st){
           const est = estimatePercentileFromCuts(subj, Number(sdoc.score), st);
           if(est.ok){
@@ -1398,8 +1652,9 @@
       pctMap[subj] = pct;
     }
 
-    const engDoc = state.scores.find(s=>s.subject==="영어") ?? null;
-    const hisDoc = state.scores.find(s=>s.subject==="한국사") ?? null;
+    // v6: 영어/한국사 등급도 "현재 선택 학년도/종류/회차" 기준으로 가져오기
+    const engDoc = getScoreDoc(selectedYear, selectedTypeId, "영어", selectedRound);
+    const hisDoc = getScoreDoc(selectedYear, selectedTypeId, "한국사", selectedRound);
     const engGrade = Number(engDoc?.grade);
     const hisGrade = Number(hisDoc?.grade);
     if(!Number.isFinite(engGrade) || !Number.isFinite(hisGrade)){
@@ -1408,13 +1663,13 @@
       return;
     }
 
-    const col = calcCollegeScoreSnuJigyunV1({
+    const col = calcCollegeScoreSnu({
       korPct: pctMap["국어"],
       mathPct: pctMap["수학"],
       chemPct: pctMap["화학1"],
       bioPct: pctMap["생명과학1"],
       engGrade, hisGrade
-    });
+    }, univ.school);
 
     if(!col.ok){
       c3 = new Chart($("chart3").getContext("2d"),{ type:"bar", data:{labels:[],datasets:[{label:"",data:[]}]}, options:{responsive:true}});
@@ -1428,7 +1683,7 @@
 
     const bars = cuts.map(u=>{
       const diff = myCollegeScore - u.cutCollegeScore;
-      const mockNeed = myScore - diff*0.5; // v5 임시 환산(나중에 역산 엔진으로 교체)
+      const mockNeed = myScore - diff*0.5; // v6에서도 임시 환산(추후 역산 엔진)
       return { label: `${u.major}`, v: mockNeed, diff };
     });
 
@@ -1449,7 +1704,7 @@
       options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}
     });
 
-    let note = `내 대학점수(서울대 지균 v1): ${round1(myCollegeScore)} / (그래프3은 v5 임시 환산 모델)`;
+    let note = `내 대학점수(서울대 지균 v1): ${round1(myCollegeScore)} / (그래프3은 v6 임시 환산 모델)`;
     if(usedEstimate) note += " · 일부 과목은 컷 기반 추정 백분위 사용";
     noteEl.textContent = note;
   }
@@ -1475,9 +1730,6 @@
     renderChart4();
   }
 
-  /* ============================
-   *  백분위 관련 알림
-   * ============================ */
   function renderPctAlert(){
     if(!currentUser) return;
     const el = $("pctAlert");
@@ -1503,9 +1755,6 @@
     el.textContent = msgs.join(" ");
   }
 
-  /* ============================
-   *  대학 추천(카드)
-   * ============================ */
   function renderUniversityGroups(){
     const wrap = $("univGroups");
     const note = $("univNote");
@@ -1530,8 +1779,8 @@
         if(c!=null) pct = c;
       }
       if(pct==null){
-        const sdoc = state.scores.find(s=>s.typeId===selectedTypeId && s.subject===subj && Number(s.round)===Number(selectedRound));
-        const st = state.stats.find(x=>x.typeId===selectedTypeId && x.subject===subj && Number(x.round)===Number(selectedRound));
+        const sdoc = getScoreDoc(selectedYear, selectedTypeId, subj, selectedRound);
+        const st = state.stats.find(x=>String(x.year)===String(selectedYear) && x.typeId===selectedTypeId && x.subject===subj && Number(x.round)===Number(selectedRound));
         if(sdoc && st){
           const est = estimatePercentileFromCuts(subj, Number(sdoc.score), st);
           if(est.ok){
@@ -1548,8 +1797,9 @@
       pctMap[subj] = pct;
     }
 
-    const engDoc = state.scores.find(s=>s.subject==="영어") ?? null;
-    const hisDoc = state.scores.find(s=>s.subject==="한국사") ?? null;
+    // v6: 영어/한국사도 현재 선택 학년도/종류/회차 기준
+    const engDoc = getScoreDoc(selectedYear, selectedTypeId, "영어", selectedRound);
+    const hisDoc = getScoreDoc(selectedYear, selectedTypeId, "한국사", selectedRound);
     const engGrade = Number(engDoc?.grade);
     const hisGrade = Number(hisDoc?.grade);
     if(!Number.isFinite(engGrade) || !Number.isFinite(hisGrade)){
@@ -1557,13 +1807,13 @@
       return;
     }
 
-    const col = calcCollegeScoreSnuJigyunV1({
+    const col = calcCollegeScoreSnu({
       korPct: pctMap["국어"],
       mathPct: pctMap["수학"],
       chemPct: pctMap["화학1"],
       bioPct: pctMap["생명과학1"],
       engGrade, hisGrade
-    });
+    }, univ.school);
 
     if(!col.ok){
       wrap.innerHTML = `<div class="muted">대학추천 계산 불가: 대학점수 계산 값이 부족해요.</div>`;
@@ -1630,9 +1880,6 @@
     note.textContent = usedEstimate ? "※ 일부 과목은 컷 기반 추정 백분위 사용" : "";
   }
 
-  /* ============================
-   *  목표 시스템(의 설정 / 치 열람)
-   * ============================ */
   function renderGoalSection(){
     if(!currentUser) return;
 
@@ -1677,9 +1924,6 @@
     }
   }
 
-  /* ============================
-   *  관리(의)
-   * ============================ */
   $("manageTab").addEventListener("click", ()=>{
     if(!isAdmin(currentUser)) return;
     $("manageSection").classList.toggle("hidden");
@@ -1789,19 +2033,21 @@
     const box = $("univAdminList");
     const list = state.univ.snuJigyun;
     box.innerHTML = `
-      <table>
-        <thead><tr><th>계열</th><th>학교</th><th>학과</th><th>컷(대학점수)</th></tr></thead>
-        <tbody>
-          ${list.map(u=>`
-            <tr>
-              <td>${escapeHtml(u.track)}</td>
-              <td>${escapeHtml(u.school)}</td>
-              <td>${escapeHtml(u.major)}</td>
-              <td><b>${round1(u.cutCollegeScore)}</b></td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>계열</th><th>학교</th><th>학과</th><th>컷(대학점수)</th></tr></thead>
+          <tbody>
+            ${list.map(u=>`
+              <tr>
+                <td>${escapeHtml(u.track)}</td>
+                <td>${escapeHtml(u.school)}</td>
+                <td>${escapeHtml(u.major)}</td>
+                <td><b>${round1(u.cutCollegeScore)}</b></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
     `;
   }
 
@@ -1812,7 +2058,7 @@
     h.innerHTML = "";
     for(let g=1; g<=9; g++){
       e.innerHTML += `<tr><td>${g}</td><td>${ENG_PENALTY[g]}</td></tr>`;
-      h.innerHTML += `<tr><td>${g}</td><td>${HIS_PENALTY[g]}</td></tr>`;
+      h.innerHTML += `<tr><td>${g}</td><td>${HIS_PENALTY_V1[g]}</td></tr>`;
     }
 
     const tbody = $("snuCutsTable");
@@ -1838,8 +2084,6 @@
   await loadStateFromServer();
   startRealtimeSync();
   boot();
-
 </script>
 </body>
 </html>
-
