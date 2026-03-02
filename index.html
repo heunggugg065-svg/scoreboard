@@ -202,6 +202,9 @@
         <div class="card">
           <div class="t">그래프 4) 단원별 점수 비교</div>
           <div class="d mini">의가 입력한 단원 점수</div>
+          <div class="row" style="gap:8px;align-items:center;margin:6px 0 0">
+            <label class="muted mini"><input id="wmaToggle" type="checkbox" checked style="margin-right:6px">가중 이동평균 ON</label>
+          </div>
           <canvas id="chart4"></canvas>
         </div>
       </div>
@@ -316,13 +319,13 @@
 
       <div class="section" style="background:#fff">
         <h3 style="margin:0 0 8px">🎓 대학 데이터(서울대 지균 v1)</h3>
-        <div class="muted">* v6에서는 “서울대(지균)” 5개만 사용()</div>
+        <div class="muted">* v6에서는 “서울대(지균)” 5개만 사용</div>
         <div id="univAdminList" class="muted" style="margin-top:8px"></div>
       </div>
     </div>
 
     <!-- 맨 아래: 계산식/업데이트 -->
-    <div class="footer">
+    <div id="footerSection" class="footer hidden">
       <div class="footer-row">
         <small id="verLine">v6</small>
         <div class="row" style="margin:0;gap:8px;justify-content:flex-end">
@@ -330,14 +333,14 @@
         </div>
       </div>
 
-      <div id="calcWrap" style="margin-top:12px; display:none">
+      <div style="margin-top:12px">
         <details id="calcFinal">
           <summary>📐 점수 계산 방식 (최종버전) ▼</summary>
           <div class="hr"></div>
-          <div class="muted" style="margin-bottom:6px">현재 최종버전에는 “서울대(지균) v1”만 존재합니다.</div>
+          <div class="muted" style="margin-bottom:6px">현재 최종버전에는 “서울대(지균) v2”가 적용됩니다.</div>
 
           <div class="card" style="margin-top:10px">
-            <div class="t">서울대학교(지균) v1</div>
+            <div class="t">서울대학교(지균) v2</div>
             <div class="d">
               대학점수 = (0.35×수학백분위 + 0.30×국어백분위 + 0.25×탐구평균백분위 - 영어감점 - 한국사감점) ÷ 0.90 × 100
               <div class="muted" style="margin-top:6px">탐구평균 = (화학1백분위 + 생명과학1백분위) / 2</div>
@@ -378,10 +381,18 @@
 
         <div class="hr"></div>
 
-        <details id="calcHistory">
-          <summary>🗂 역대 점수 계산 방식 ▼</summary>
-          <div class="muted" style="margin-top:8px">현재는 비어있는 것이 정상입니다.</div>
-        </details>
+        
+<details id="calcHistory">
+  <summary>🗂 역대 점수 계산 방식 ▼</summary>
+  <div class="hr"></div>
+  <div class="card" style="margin-top:10px">
+    <div class="t">서울대학교(지균) v1 (이전)</div>
+    <div class="d">
+      대학점수 = (0.35×수학백분위 + 0.30×국어백분위 + 0.25×탐구평균백분위 - 영어감점 - 한국사감점) ÷ 0.90 × 100
+      <div class="muted" style="margin-top:6px">* v2에서 한국사 감점표만 변경</div>
+    </div>
+  </div>
+</details>
       </div>
     </div>
 
@@ -409,8 +420,8 @@
     measurementId: "G-VC1922P5SV"
   };
 
-  const APP_VERSION = 6;          // 공지/표시용 앱 버전          // 공지/표시용 앱 버전
-  const DATA_SCHEMA_VERSION = 6;  // 데이터 구조 버전(마이그레이션용)  // 데이터 구조 버전(마이그레이션용)
+  const APP_VERSION = 6;          // 공지/표시용 앱 버전
+  const DATA_SCHEMA_VERSION = 6;  // 데이터 구조 버전(마이그레이션용)
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -432,6 +443,22 @@
   const isAdmin = (u)=> u?.grade === "의";
   const roleOrder = ["수","약","한","치","의"]; // 낮→높
   const roleGE = (userGrade, minGrade)=> roleOrder.indexOf(userGrade) >= roleOrder.indexOf(minGrade);
+
+
+// 학년도
+const ACADEMIC_YEARS = ["2026","2027"];
+
+// 학년도 접근 권한
+function canAccessYear(grade, year){
+  if(String(year)==="2027") return true; // 전 등급
+  if(String(year)==="2026") return ["의","치","한"].includes(grade);
+  return false;
+}
+
+// 전체회차 접근 권한 (수는 불가)
+function canUseAllRounds(grade){
+  return ["약","한","치","의"].includes(grade);
+}
 
   const SCORE_MAX = (subject)=>{
     if(subject==="화학1"||subject==="생명과학1"||subject==="한국사") return 50;
@@ -461,13 +488,8 @@
     return 9;
   }
 
-  const ENG_PENALTY = {1:0,2:0,3:0,4:0.5,5:1.0,6:1.5,7:2.0,8:2.5,9:3.0};
-
-// 한국사 감점표 v1 (기존)
-const HIS_PENALTY_V1 = {1:0,2:0,3:0.5,4:1.0,5:1.5,6:2.0,7:2.5,8:3.0,9:3.5};
-
-// 한국사 감점표 v2 (v6: 서울대학교(지균) 계산방식 v2)
-const HIS_PENALTY_V2 = {1:0,2:0,3:0,4:0.4,5:0.8,6:1.2,7:1.6,8:2.0,9:2.4};
+  const ENG_PENALTY = {1:0,2:1,3:2,4:4,5:6,6:8,7:10,8:12,9:14};
+  const HIS_PENALTY = {1:0,2:0,3:0,4:0.4,5:0.8,6:1.2,7:1.6,8:2.0,9:2.4};
   const PCT_FLOOR = {1:96,2:89,3:77,4:60,5:40,6:23,7:11,8:4,9:0};
 
   const SNU_BASE = {
@@ -497,8 +519,8 @@ const HIS_PENALTY_V2 = {1:0,2:0,3:0,4:0.4,5:0.8,6:1.2,7:1.6,8:2.0,9:2.4};
   function defaultState(){
     return {
       schemaVersion: DATA_SCHEMA_VERSION,
-      years: ["2025", "2026"],      // v6: 학년도 탭 복구
-      currentYear: "2026",
+      years: ["2026","2027"],      // v6: 학년도 시스템(2026/2027)
+      currentYear: "2027",
       users: [],
       logs: [],
       types: [],
@@ -516,59 +538,12 @@ const HIS_PENALTY_V2 = {1:0,2:0,3:0,4:0.4,5:0.8,6:1.2,7:1.6,8:2.0,9:2.4};
   let state = defaultState();
   let currentUser = null;
 
-  let selectedYear = "2026";
+  let selectedYear = "2027";
   let selectedTypeId = null;
   let selectedSubject = SUBJECTS[0];
-
-
-// 서울대학교(일반) 데이터 (35개 학과) - 제공된 백분위에 +0.5 적용 (소수점 둘째자리)
-const SNU_GENERAL_BASE = [
-  // 자연계열
-  {track:"자연계열", school:"서울대학교(일반)", major:"수리과학부", cut:99.00},
-  {track:"자연계열", school:"서울대학교(일반)", major:"통계학과", cut:96.00},
-  {track:"자연계열", school:"서울대학교(일반)", major:"물리학전공", cut:95.75},
-  {track:"자연계열", school:"서울대학교(일반)", major:"천문학전공", cut:97.00},
-  {track:"자연계열", school:"서울대학교(일반)", major:"화학부", cut:98.75},
-  {track:"자연계열", school:"서울대학교(일반)", major:"생명과학부", cut:98.25},
-  {track:"자연계열", school:"서울대학교(일반)", major:"지구환경과학부", cut:97.00},
-  {track:"자연계열", school:"서울대학교(일반)", major:"식물생산과학부", cut:95.75},
-  {track:"자연계열", school:"서울대학교(일반)", major:"산림과학부", cut:97.75},
-  {track:"자연계열", school:"서울대학교(일반)", major:"응용생물화학부", cut:97.00},
-  {track:"자연계열", school:"서울대학교(일반)", major:"바이오시스템·소재학부", cut:98.75},
-  {track:"자연계열", school:"서울대학교(일반)", major:"스마트시스템과학과", cut:null},
-  {track:"자연계열", school:"서울대학교(일반)", major:"식품영양학과", cut:97.75},
-  {track:"자연계열", school:"서울대학교(일반)", major:"의류학과", cut:null},
-  {track:"자연계열", school:"서울대학교(일반)", major:"첨단융합학부", cut:98.50},
-
-  // 공학계열
-  {track:"공학계열", school:"서울대학교(일반)", major:"건설환경도시공학부", cut:98.75},
-  {track:"공학계열", school:"서울대학교(일반)", major:"기계공학부", cut:96.75},
-  {track:"공학계열", school:"서울대학교(일반)", major:"재료공학부", cut:97.75},
-  {track:"공학계열", school:"서울대학교(일반)", major:"전기·정보공학부", cut:97.75},
-  {track:"공학계열", school:"서울대학교(일반)", major:"컴퓨터공학부", cut:97.75},
-  {track:"공학계열", school:"서울대학교(일반)", major:"화학생물공학부", cut:98.75},
-  {track:"공학계열", school:"서울대학교(일반)", major:"건축학과", cut:92.25},
-  {track:"공학계열", school:"서울대학교(일반)", major:"산업공학과", cut:96.50},
-  {track:"공학계열", school:"서울대학교(일반)", major:"에너지자원공학과", cut:96.00},
-  {track:"공학계열", school:"서울대학교(일반)", major:"원자핵공학과", cut:96.00},
-  {track:"공학계열", school:"서울대학교(일반)", major:"조선해양공학과", cut:97.00},
-  {track:"공학계열", school:"서울대학교(일반)", major:"항공우주공학과", cut:95.25},
-  {track:"공학계열", school:"서울대학교(일반)", major:"식품·동물생명공학부", cut:96.50},
-  {track:"공학계열", school:"서울대학교(일반)", major:"조경·지역시스템공학부", cut:98.25},
-  // 자유전공(광역은 공학계열로 넣기)
-  {track:"공학계열", school:"서울대학교(일반)", major:"광역", cut:97.25},
-  {track:"자유전공", school:"서울대학교(일반)", major:"자유전공학부", cut:97.75},
-
-  // 의치약수
-  {track:"수의예과", school:"서울대학교(일반)", major:"수의예과", cut:98.50},
-  {track:"약학과", school:"서울대학교(일반)", major:"약학계열", cut:99.00},
-  {track:"치의학과", school:"서울대학교(일반)", major:"치의학과", cut:98.75},
-  {track:"의예과", school:"서울대학교(일반)", major:"의예과", cut:99.50},
-];
-
   let selectedRound = null;
 
-  let c1=null,c2=null,c3=null,c4=null;
+  let c1=null,c2=null,c3=null,c4=null,c5=null;
 
   async function sha256(text){
     const enc = new TextEncoder().encode(text);
@@ -579,31 +554,28 @@ const SNU_GENERAL_BASE = [
 
   const stateRef = doc(db, ...STATE_DOC_PATH);
 
-  
   function migrateToV6(){
-    // v6 마이그레이션 규칙
-    // - 사용자/비밀번호/종류/대학데이터 등은 유지
-    // - 점수 관련 데이터(회차/점수/통계/단원)만 초기화 (v6에서 1회)
-    // - 학년도 시스템: 2026 / 2027 (2026은 의/치/한만, 2027은 전 등급)
-    const sv = Number(state.schemaVersion ?? 0);
+    // v6: year 필드 도입(기존 데이터는 2025로 자동 편입)
+    const ensureYear = (obj)=>{
+      if(obj && (obj.year==null || obj.year==="")) obj.year = "2027";
+      return obj;
+    };
 
-    // years/currentYear 보정(항상)
-    state.years = ["2026","2027"];
-    if(!state.currentYear) state.currentYear = "2027";
+    // years/currentYear 기본 보정
+    if(!Array.isArray(state.years) || state.years.length===0) state.years = ["2026","2027"];
+    if(!state.currentYear || !state.years.includes(state.currentYear)) state.currentYear = "2027";
 
-    if(sv >= 6) return;
-
-    // ✅ v6: 점수 데이터만 초기화
+    // v6: 점수 데이터(회차/점수/통계/단원) 1회 초기화 (비밀번호/유저/종류는 유지)
     state.rounds = [];
     state.scores = [];
     state.stats  = [];
     state.units  = [];
 
-    // 선택 상태/기타 보정
-    if(!Array.isArray(state.types)) state.types = [];
-    if(!Array.isArray(state.users)) state.users = [];
-    if(!Array.isArray(state.logs)) state.logs = [];
-    if(!state.seen) state.seen = {};
+    // 컬렉션별 year 보정
+    if(Array.isArray(state.rounds)) state.rounds.forEach(ensureYear);
+    if(Array.isArray(state.scores)) state.scores.forEach(ensureYear);
+    if(Array.isArray(state.stats))  state.stats .forEach(ensureYear);
+    if(Array.isArray(state.units))  state.units .forEach(ensureYear);
 
     state.schemaVersion = 6;
   }
@@ -670,8 +642,8 @@ const SNU_GENERAL_BASE = [
     show($("scoreEditorSection"), false);
     show($("chartsSection"), false);
     show($("detailSection"), false);
-  show($("calcWrap"), false);
     show($("goalSection"), false);
+    show($("footerSection"), false);
 
     show($("manageTab"), false);
     show($("manageSection"), false);
@@ -693,8 +665,8 @@ const SNU_GENERAL_BASE = [
   }
 
   function destroyCharts(){
-    if(c1) c1.destroy(); if(c2) c2.destroy(); if(c3) c3.destroy(); if(c4) c4.destroy();
-    c1=c2=c3=c4=null;
+    if(c1) c1.destroy(); if(c2) c2.destroy(); if(c3) c3.destroy(); if(c4) c4.destroy(); if(c5) c5.destroy();
+    c1=c2=c3=c4=c5=null;
   }
 
   function refreshAll(){
@@ -721,9 +693,7 @@ const SNU_GENERAL_BASE = [
     show($("pickSection"), true);
     show($("chartsSection"), true);
     show($("detailSection"), true);
-
-  // 로그인 후에만 점수 계산 방식/역대 계산 방식 표시
-  show($("calcWrap"), true);
+    show($("footerSection"), true);
     show($("logoutBtn"), true);
 
     show($("roleBadge"), true);
@@ -791,132 +761,73 @@ const SNU_GENERAL_BASE = [
   /* ============================
    *  공지(업데이트) 시스템
    * ============================ */
-    const CHANGELOG = {
-    5: [
-      {
-        title: "v5부터 데이터 초기화 방지",
-        minRole: "수",
-        items: [
-          "Firestore 문서 경로를 public/state로 고정(버전업해도 데이터 유지)",
-          "앱 버전(APP_VERSION)과 데이터 버전(schemaVersion) 분리"
-        ]
-      },
-      {
-        title: "업데이트 공지 시스템",
-        minRole: "수",
-        items: [
-          "로그인 직후 계정별(비밀번호/ID별) 버전당 1회만 공지 표시",
-          "닫기 누르면 자동 재표시 없음",
-          "하단에서 버전별(v5, v6...) 업데이트 내역 다시 보기"
-        ]
-      },
-      {
-        title: "목표 대학·학과(의 설정 / 치 열람)",
-        minRole: "수",
-        items: [
-          "목표는 전체 공통 1개(학년도 구분 없음)",
-          "의만 설정/수정/삭제, 치는 보기만 가능",
-          "한/약/수는 목표 영역 숨김"
-        ]
-      },
-      {
-        title: "영어/한국사",
-        minRole: "수",
-        items: [
-          "백분위 완전 삭제",
-          "점수 입력 시 등급 자동 계산",
-          "입력 범위 제한(영어 0~100 / 한국사 0~50)"
-        ]
-      },
-      {
-        title: "그래프3 대학 비교(7막대)",
-        minRole: "수",
-        items: [
-          "Y축은 점수(모의고사 점수)만 사용",
-          "내 막대 1 + 아래3 + 위3 = 총 7개 고정",
-          "우상향 정렬"
-        ]
-      },
-      {
-        title: "대학교 관련 데이터 업데이트",
-        minRole: "수",
-        items: [
-          "서울대학교(지균) 대학점수 계산방식 v1 추가",
-          "의예과 컷=99.5 고정, 나머지는 제공 표 비율로 계산",
-          "대학추천 분류: 적정/소신/안정/상향"
-        ]
-      },
-      {
-        title: "백분위 관련 알림",
-        minRole: "수",
-        items: [
-          "컷 부족 시 분석/계산 제한 안내",
-          "영어/한국사는 백분위 미사용 안내"
-        ]
-      }
-    ],
+  const CHANGELOG = {
     6: [
-      {
-        title: "학년도 시스템 정식 도입",
-        minRole: "수",
-        items: [
-          "학년도는 2026학년도 / 2027학년도 2개",
-          "2026학년도: 의/치/한만 접근 가능",
-          "2027학년도: 전 등급 접근 가능"
-        ]
-      },
-      {
-        title: "점수 데이터 초기화",
-        minRole: "수",
-        items: [
-          "v6 최초 적용 시 점수/회차/통계/단원 데이터만 초기화",
-          "계정(비밀번호/이름/등급) 및 설정 데이터는 유지"
-        ]
-      },
-      {
-        title: "그래프 구조 개편",
-        minRole: "수",
-        items: [
-          "그래프2: 선택한 종류는 선택 회차(또는 전체회차=평균)로 표시",
-          "그래프2: 다른 종류는 같은 과목의 평균으로 표시(과목끼리 비교 금지 유지)",
-          "그래프2: 다른 학년도 비교 시 ‘2026학년도 ○○’ 처럼 학년도만 표시",
-          "그래프2: 데이터가 없는 종류/학년도는 자동 제외"
-        ]
-      },
-      {
-        title: "전체회차 자동 생성",
-        minRole: "약",
-        items: [
-          "회차를 1개 이상 만들면 전체회차가 자동 생성",
-          "전체회차 기준 분석은 평균 기반",
-          "전체회차 접근 권한: 약/한/치/의"
-        ]
-      },
-      {
-        title: "대학 계산 안정성 강화",
-        minRole: "치",
-        items: [
-          "대학 계산에서 선택 학년도 기준으로만 평균/대체 점수 계산",
-          "그래프3: 내 점수 기준 아래3 + 위3(총 7칸) 고정, 데이터 부족 시 빈칸 유지",
-          "서울대학교(지균) 한국사 감점 규칙(v2) 반영"
-        ]
-      },
-      {
-        title: "대학교 관련 데이터 업데이트",
-        minRole: "치",
-        items: [
-          "서울대학교(일반) 데이터 반영(35개 학과)",
-          "한 버전에 한 학교만 추가(추가 학교 데이터는 이후 버전에서 확장)"
-        ]
-      },
-      {
-        title: "모바일 UI 안정화",
-        minRole: "수",
-        items: [
-          "영어/한국사 등급표가 모바일에서도 보이도록 스크롤/레이아웃 개선",
-          "로그인 후에만 ‘점수 계산 방식 / 역대 점수 계산 방식’ 표시"
-        ]
-      }
+      { title:"학년도 시스템 정식 도입", bullets:[
+        "학년도: 2026 / 2027 (2026은 의·치·한만 접근 가능, 2027은 전 등급)",
+        "선택한 학년도 기준으로 회차/점수/분석이 표시됨"
+      ]},
+      { title:"점수 데이터 1회 초기화", bullets:[
+        "v6 첫 적용 시 점수/회차/통계/단원 데이터만 1회 초기화",
+        "비밀번호/이름/등급(계정) + 종류/대학 데이터는 유지"
+      ]},
+      { title:"전체회차 자동 생성 & 평균 모드", bullets:[
+        "회차를 1개 이상 만들면 ‘전체회차’가 자동 생성됨",
+        "전체회차 선택 시: 그래프3/대학추천은 ‘평균 점수’ 기준으로 동작"
+      ]},
+      { title:"그래프 표시 방식 개선", bullets:[
+        "그래프2: 선택한 종류는 선택 회차 점수, 나머지 종류는 평균 점수로 표시",
+        "선택한 막대는 가운데(짝수면 가운데 2개 중 오른쪽)로 배치",
+        "다른 학년도 데이터는 라벨에 학년도 표기(현재 학년도는 생략)"
+      ]},
+      { title:"대학교 관련 데이터 업데이트", bullets:[
+        "서울대학교(일반) 데이터 반영(35개 학과)",
+        "서울대학교(일반) 대학점수 계산방식은 지균 v1과 동일 적용",
+        "서울대학교(지균) 대학점수 계산방식 v2 업데이트(한국사 감점표 변경)"
+      ]},
+      { title:"모바일 UI 안정화", bullets:[
+        "영어/한국사 등급표가 모바일에서 안 보이던 문제 개선(가로 스크롤/접힘)",
+        "전체 화면에서 카드/표 레이아웃 깨짐 최소화"
+      ]},
+      { title:"로그인 전 화면 정리", bullets:[
+        "로그인 전에는 ‘업데이트 내역/점수 계산 방식’ 영역이 보이지 않음",
+        "로그인 후에만 누적 관리/설명 영역 표시"
+      ]}
+    ],
+    5: [
+      { minRole:"수", title:"v5부터 데이터 초기화 방지", bullets:[
+        "Firestore 문서 경로를 public/state로 고정(버전업해도 데이터 유지)",
+        "앱 버전(APP_VERSION)과 데이터 버전(schemaVersion) 분리"
+      ]},
+      { minRole:"수", title:"업데이트 공지 시스템", bullets:[
+        "로그인 직후 계정별(비밀번호/ID별) 버전당 1회만 공지 표시",
+        "닫기 누르면 자동 재표시 없음",
+        "하단에서 버전별(v5, v6...) 업데이트 내역 다시 보기"
+      ]},
+      { minRole:"치", title:"목표 대학·학과(의 설정 / 치 열람)", bullets:[
+        "목표는 전체 공통 1개(학년도 구분 없음)",
+        "의만 설정/수정/삭제, 치는 보기만 가능",
+        "한/약/수는 목표 영역 숨김"
+      ]},
+      { minRole:"수", title:"영어/한국사", bullets:[
+        "백분위 완전 삭제",
+        "점수 입력 시 등급 자동 계산",
+        "입력 범위 제한(영어 0~100 / 한국사 0~50)"
+      ]},
+      { minRole:"수", title:"그래프3 대학 비교(7막대)", bullets:[
+        "Y축은 점수(모의고사 점수)만 사용",
+        "내 막대 1 + 아래3 + 위3 = 총 7개 고정",
+        "우상향 정렬"
+      ]},
+      { minRole:"수", title:"대학교 관련 데이터 업데이트", bullets:[
+        "서울대학교(지균) 대학점수 계산방식 v1 추가(5개 학과)",
+        "의예과 컷=99.5 고정, 나머지는 제공 표 비율로 계산",
+        "대학추천 분류: 적정/소신/안정/상향"
+      ]},
+      { minRole:"수", title:"백분위 관련 알림", bullets:[
+        "컷 부족 시 분석/계산 제한 안내",
+        "영어/한국사는 백분위 미사용 안내"
+      ]}
     ]
   };
 
@@ -951,13 +862,16 @@ const SNU_GENERAL_BASE = [
   function openModal(html){
     const root = $("modalRoot");
     root.innerHTML = `
-      <div class="modal-backdrop">
+      <div class="modal-backdrop" id="modalBackdrop">
         <div class="modal">
           ${html}
         </div>
       </div>
     `;
     root.classList.remove("hidden");
+    // backdrop click -> close
+    const bd = $("modalBackdrop");
+    if(bd){ bd.onclick = (e)=>{ if(e.target===bd) closeModal(); }; }
   }
   function closeModal(){
     const root = $("modalRoot");
@@ -1020,36 +934,74 @@ const SNU_GENERAL_BASE = [
   /* ============================
    *  선택 UI: 학년도/종류/과목/회차
    * ============================ */
-  
-  function canAccessYear(grade, year){
-    if(String(year)==="2026") return ["의","치","한"].includes(grade);
-    if(String(year)==="2027") return true;
-    return false;
-  }
-
-  function getAllowedYears(){
-    const years = Array.isArray(state.years) ? state.years : ["2026","2027"];
-    if(!currentUser) return years.filter(y=>String(y)==="2027"); // 로그인 전엔 최소만
-    return years.filter(y=>canAccessYear(currentUser.grade, y));
-  }
-
   function renderYearSelect(){
     const sel = $("yearSelect");
     sel.innerHTML = "";
-    const years = getAllowedYears();
+    let years = Array.isArray(state.years) ? state.years.map(String) : ["2026","2027"];
+    // 권한: 2026학년도는 의/치/한만, 2027학년도는 전 등급
+    if(currentUser && !["의","치","한"].includes(currentUser.grade)){
+      years = years.filter(y=>String(y)==="2027");
+    }
+
     years.forEach(y=>{
       const opt = document.createElement("option");
       opt.value = String(y);
       opt.textContent = `${y}학년도`;
       sel.appendChild(opt);
     });
-    if(!selectedYear || !years.includes(String(selectedYear))){
-      selectedYear = (state.currentYear && years.includes(String(state.currentYear))) ? String(state.currentYear) : String(years[years.length-1] || "2027");
-    }
+    if(!selectedYear || !years.includes(String(selectedYear))) selectedYear = state.currentYear || years[years.length-1];
     sel.value = String(selectedYear);
   }
+  $("yearSelect").addEventListener("change", ()=>{
+    selectedYear = $("yearSelect").value;
+    state.currentYear = selectedYear;
+    selectedRound = null;
+    // 학년도 선택은 개인 UI 상태이므로 서버에 저장하지 않음(권한 문제 방지)
+    renderRoundButtons();
+    updatePickLabel();
+    updateDetail();
+    renderAllCharts();
+    renderUniversityGroups();
+    renderPctAlert();
+  });
 
-function renderSubjectButtons(){
+  function renderTypeSelect(){
+    const sel = $("typeSelect");
+    sel.innerHTML = "";
+    if(state.types.length===0){
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "종류 없음(의가 관리에서 추가)";
+      sel.appendChild(opt);
+      sel.disabled = true;
+      selectedTypeId = null;
+      return;
+    }
+    sel.disabled = false;
+    state.types.forEach(t=>{
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+    if(!selectedTypeId || !state.types.some(t=>t.id===selectedTypeId)){
+      selectedTypeId = state.types[0].id;
+    }
+    sel.value = selectedTypeId;
+  }
+
+  $("typeSelect").addEventListener("change", ()=>{
+    selectedTypeId = $("typeSelect").value;
+    selectedRound = null;
+    renderRoundButtons();
+    updatePickLabel();
+    updateDetail();
+    renderAllCharts();
+    renderUniversityGroups();
+    renderPctAlert();
+  });
+
+  function renderSubjectButtons(){
     const wrap = $("subjectButtons");
     wrap.innerHTML = "";
     SUBJECTS.forEach(subj=>{
@@ -1137,7 +1089,7 @@ function renderSubjectButtons(){
 
   function updatePickLabel(){
     const typeName = state.types.find(t=>t.id===selectedTypeId)?.name ?? "-";
-    const rnd = (selectedRound==null) ? "-" : `${selectedRound}회`;
+    const rnd = (selectedRound==null) ? "-" : (selectedRound===ALL_ROUND ? "전체회차" : `${selectedRound}회`);
     $("currentPick").textContent = `${selectedYear} / ${typeName} / ${selectedSubject} / ${rnd}`;
   }
 
@@ -1232,7 +1184,7 @@ function renderSubjectButtons(){
     return Math.max(0, Math.min(100, Math.round(v*100)/100));
   }
 
-  function calcCollegeScoreSnu(inputs, selectedUnivSchool){
+  function calcCollegeScoreSnuJigyunV1(inputs){
     const { korPct, mathPct, chemPct, bioPct, engGrade, hisGrade } = inputs;
 
     if([korPct, mathPct, chemPct, bioPct].some(v=>!Number.isFinite(Number(v)))) return { ok:false, reason:"필수 백분위 부족" };
@@ -1242,7 +1194,7 @@ function renderSubjectButtons(){
 
     const raw = 0.35*Number(mathPct) + 0.30*Number(korPct) + 0.25*탐구평균
       - (ENG_PENALTY[Number(engGrade)] ?? 0)
-      - (HIS_PENALTY_V1[Number(hisGrade)] ?? 0);
+      - (HIS_PENALTY[Number(hisGrade)] ?? 0);
 
     const uni = (raw / 0.90) * 100;
     const uni2 = Math.round(uni*100)/100;
@@ -1483,125 +1435,25 @@ function renderSubjectButtons(){
     });
   }
 
-    function renderChart2(){
-    const box = $("chart2Box");
-    box.innerHTML = "";
-
-    if(!currentUser){ box.innerHTML = `<div class="muted">로그인 후 이용할 수 있어요.</div>`; return; }
-
-    const year = String(selectedYear);
-    const otherYear = (year==="2026") ? "2027" : "2026";
-
-    const subject = String(selectedSubject);
-    if(!subject){ box.innerHTML = `<div class="muted">과목을 선택해주세요.</div>`; return; }
-
-    // 선택 종류/회차
-    const selType = String(selectedType);
-    const selRound = String(selectedRound);
-
-    // 점수 가져오기
-    const getRoundScore = (y,t,sub,rn)=>{
-      const s = state.scores.find(x=>String(x.year)===String(y) && String(x.type)===String(t) && String(x.subject)===String(sub) && String(x.round)===String(rn));
-      return s ? Number(s.score) : null;
-    };
-    const getAvgScore = (y,t,sub)=>{
-      const arr = state.scores.filter(x=>String(x.year)===String(y) && String(x.type)===String(t) && String(x.subject)===String(sub)).map(x=>Number(x.score)).filter(v=>Number.isFinite(v));
-      if(!arr.length) return null;
-      return arr.reduce((a,b)=>a+b,0)/arr.length;
-    };
-
-    // 표시할 (year,type) 후보: 선택 학년도 + 다른 학년도
-    const candidates = [];
-    const pushIfHas = (y,t,isSelected)=>{
-      // 선택 종류는 선택 회차(전체회차면 평균), 나머지는 평균
-      let val = null;
-      if(isSelected){
-        val = (selRound==="전체회차") ? getAvgScore(y,t,subject) : getRoundScore(y,t,subject,selRound);
-      }else{
-        val = getAvgScore(y,t,subject);
-      }
-      if(val==null) return;
-      const prefix = (String(y)===year) ? "" : `${y}학년도 `;
-      candidates.push({y:String(y), t:String(t), label: prefix + t, value: val, isSelected});
-    };
-
-    // 선택 학년도
-    state.types.forEach(t=>{
-      const isSel = (t===selType);
-      pushIfHas(year, t, isSel);
-    });
-    // 다른 학년도(선택 종류는 제외 요청)
-    state.types.forEach(t=>{
-      if(t===selType) return;
-      pushIfHas(otherYear, t, false);
+  function renderChart2(){
+    const labels = state.types.map(t=>t.name);
+    const values = state.types.map(t=>{
+      const nums = state.scores
+        .filter(s=>String(s.year)===String(selectedYear) && s.typeId===t.id && s.subject===selectedSubject)
+        .map(s=>Number(s.score))
+        .filter(v=>Number.isFinite(v));
+      if(nums.length===0) return null;
+      return nums.reduce((a,b)=>a+b,0)/nums.length;
     });
 
-    if(!candidates.length){
-      box.innerHTML = `<div class="muted">표시할 데이터가 없어요.</div>`;
-      return;
-    }
-
-    // 선택 종류 막대를 가운데로
-    const selectedIdx = candidates.findIndex(x=>x.isSelected && x.y===year);
-    if(selectedIdx>=0){
-      const sel = candidates.splice(selectedIdx,1)[0];
-      const mid = Math.ceil(candidates.length/2); // 짝수면 오른쪽
-      candidates.splice(mid,0,sel);
-    }
-
-    // 막대 그래프 렌더(0~100)
-    const maxW = 520;
-    const rowWrap = document.createElement("div");
-    rowWrap.style.display = "grid";
-    rowWrap.style.gap = "10px";
-
-    candidates.forEach((c)=>{
-      const v = clamp(c.value,0,100);
-      const row = document.createElement("div");
-      row.style.display="grid";
-      row.style.gridTemplateColumns="140px 1fr 48px";
-      row.style.alignItems="center";
-      row.style.gap="10px";
-
-      const lab = document.createElement("div");
-      lab.className="muted";
-      lab.style.fontWeight = c.isSelected ? "700" : "500";
-      lab.textContent = c.label;
-
-      const barBox = document.createElement("div");
-      barBox.style.height="14px";
-      barBox.style.borderRadius="999px";
-      barBox.style.background="#eef2ff";
-      barBox.style.position="relative";
-      barBox.style.overflow="hidden";
-
-      const bar = document.createElement("div");
-      bar.style.height="100%";
-      bar.style.width = `${(v/100)*100}%`;
-      bar.style.background = c.isSelected ? "#4f46e5" : "#a5b4fc";
-
-      barBox.appendChild(bar);
-
-      const val = document.createElement("div");
-      val.style.textAlign="right";
-      val.style.fontVariantNumeric="tabular-nums";
-      val.textContent = fmt1(v);
-
-      row.appendChild(lab);
-      row.appendChild(barBox);
-      row.appendChild(val);
-      rowWrap.appendChild(row);
+    c2 = new Chart($("chart2").getContext("2d"),{
+      type:"bar",
+      data:{labels,datasets:[{label:`${selectedSubject} 종류별 평균`,data:values}]},
+      options:{responsive:true,scales:{y:{beginAtZero:true,max:100}}}
     });
-
-    box.appendChild(rowWrap);
-    const note = document.createElement("div");
-    note.className="muted";
-    note.style.marginTop="10px";
-    note.textContent = "선택한 종류는 선택 회차(또는 전체회차=평균), 나머지는 평균으로 표시돼요. (과목 비교는 같은 과목만)";
-    box.appendChild(note);
   }
 
-function renderChart3(){
+  function renderChart3(){
     const noteEl = $("chart3Note");
     noteEl.textContent = "";
 
@@ -1663,13 +1515,13 @@ function renderChart3(){
       return;
     }
 
-    const col = calcCollegeScoreSnu({
+    const col = calcCollegeScoreSnuJigyunV1({
       korPct: pctMap["국어"],
       mathPct: pctMap["수학"],
       chemPct: pctMap["화학1"],
       bioPct: pctMap["생명과학1"],
       engGrade, hisGrade
-    }, univ.school);
+    });
 
     if(!col.ok){
       c3 = new Chart($("chart3").getContext("2d"),{ type:"bar", data:{labels:[],datasets:[{label:"",data:[]}]}, options:{responsive:true}});
@@ -1727,7 +1579,7 @@ function renderChart3(){
     renderChart1();
     renderChart2();
     renderChart3();
-    renderChart4();
+    renderChart4(); renderChart5();
   }
 
   function renderPctAlert(){
@@ -1807,13 +1659,13 @@ function renderChart3(){
       return;
     }
 
-    const col = calcCollegeScoreSnu({
+    const col = calcCollegeScoreSnuJigyunV1({
       korPct: pctMap["국어"],
       mathPct: pctMap["수학"],
       chemPct: pctMap["화학1"],
       bioPct: pctMap["생명과학1"],
       engGrade, hisGrade
-    }, univ.school);
+    });
 
     if(!col.ok){
       wrap.innerHTML = `<div class="muted">대학추천 계산 불가: 대학점수 계산 값이 부족해요.</div>`;
@@ -2058,7 +1910,7 @@ function renderChart3(){
     h.innerHTML = "";
     for(let g=1; g<=9; g++){
       e.innerHTML += `<tr><td>${g}</td><td>${ENG_PENALTY[g]}</td></tr>`;
-      h.innerHTML += `<tr><td>${g}</td><td>${HIS_PENALTY_V1[g]}</td></tr>`;
+      h.innerHTML += `<tr><td>${g}</td><td>${HIS_PENALTY[g]}</td></tr>`;
     }
 
     const tbody = $("snuCutsTable");
